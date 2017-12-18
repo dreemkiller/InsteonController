@@ -1310,11 +1310,32 @@ void APP_SetCursorPosition(int posX, int posY)
     LCDC_SetCursorPosition(APP_LCD, posX, posY);
 }
 
+typedef struct RectangularRegion {
+    uint32_t XMin;
+    uint32_t XMax;
+    uint32_t YMin;
+    uint32_t YMax;
+    const char *Name;
+} RectangularRegion;
+
+const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
+    if (region.XMin < x && x < region.XMax && 
+        region.YMin < y && y < region.YMax) {
+        return region.Name;
+    }
+    return NULL;
+}
 int main(void)
 {
     led1 = 1;
     led2 = 1;
     led3 = 1;
+    RectangularRegion regions[] = {
+        { 0x32, 0x9e, 0x48, 0x1ad, "Living Room"},
+        { 0x9d, 0xfa, 0x48, 0x97, "Breakfast" },
+        { 0x9d, 0xfa, 0x97, 0x1ad, "Kitchen"},
+        { 0x32, 0xfff, 0, 0x48, "Patio"}
+    };
     printf("starting\n");
     int cursorPosX = 0U;
     int cursorPosY = 0U;
@@ -1388,6 +1409,13 @@ int main(void)
                 APP_SetCursorPosition(cursorPosY, cursorPosX);
                 printf("0x%2x 0x%2x", cursorPosX, cursorPosY);
                 printf("\r\n");
+                for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
+                    const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
+                    if ( regionName ) {
+                        printf("In %s\n", regionName);
+                        break;
+                    }
+                }
             }
         }
         else
