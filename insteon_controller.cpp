@@ -43,6 +43,7 @@
 #include "board.h"
 #include "pin_mux.h"
 #include "floorplan_image.h"
+#include "http_client.h"
 
 /*******************************************************************************
  * Definitions
@@ -380,6 +381,7 @@ int main(void)
     assert( status == kStatus_Success);
 
     printf("Ready to go! joe\n");
+    http_setup();
     for (;;)
     {
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
@@ -393,7 +395,9 @@ int main(void)
                 for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
                     const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
                     if ( regionName ) {
-                        printf("In %s\n", regionName);
+                        printf("In %s\n", regionName);       
+                        http_get();
+                        
                         break;
                     }
                 }
@@ -404,5 +408,6 @@ int main(void)
             printf("error reading touch controller\r\n");
         }
     }
+    http_stop();
 }
 
