@@ -21,8 +21,8 @@ void http_setup() {
 void http_get() {
     TCPSocket socket;
     socket.open(&net);
-    socket.connect("developer.mbed.org", 80);
-    char sbuffer [] = "GET / HTTP/1.1\r\nHost: developer.mbed.org\r\n\r\n";
+    socket.connect("digg.com", 80);
+    char sbuffer [] = "GET / HTTP/1.1\r\nHost: digg.com\r\n\r\n";
     int scount = socket.send(sbuffer, sizeof(sbuffer));
     printf("sent %d [%.*s]\n", scount, strstr(sbuffer, "\r\n")-sbuffer, sbuffer);
 
