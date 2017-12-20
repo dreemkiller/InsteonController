@@ -390,14 +390,13 @@ int main(void)
             {
                 /* Update cursor position */
                 APP_SetCursorPosition(cursorPosY, cursorPosX);
-                printf("0x%2x 0x%2x", cursorPosX, cursorPosY);
-                printf("\r\n");
+            }
+            if (touch_event == kTouch_Down) {
                 for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
                     const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
                     if ( regionName ) {
                         printf("In %s\n", regionName);       
-                        http_get();
-                        
+                        http_get();        
                         break;
                     }
                 }
