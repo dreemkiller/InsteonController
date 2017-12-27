@@ -298,8 +298,8 @@ typedef struct RectangularRegion {
     uint32_t YMin;
     uint32_t YMax;
     const char *Name;
-    void (*on_function)();
-    void (*off_function)();
+    int32_t on_signal;
+    int32_t off_signal;
 } RectangularRegion;
 
 const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
@@ -315,10 +315,10 @@ int main(void)
     led2 = 1;
     led3 = 1;
     RectangularRegion regions[] = {
-        { 0x32, 0x9e, 0x48, 0x1ad, "Living Room", turn_on_living_room, turn_off_living_room },
-        { 0x9d, 0xfa, 0x48, 0x97, "Breakfast", turn_on_living_room, turn_off_living_room },
-        { 0x9d, 0xfa, 0x97, 0x1ad, "Kitchen", turn_on_living_room, turn_off_living_room },
-        { 0x32, 0xfff, 0, 0x48, "Patio", turn_on_living_room, turn_off_living_room }
+        { 0x32,  0x9e, 0x48, 0x1ad, "Living Room", INSTEON_LIVING_ROOM_ON_SIGNAL, INSTEON_LIVING_ROOM_OFF_SIGNAL },
+        { 0x9d,  0xfa, 0x48,  0x97, "Breakfast",   INSTEON_BFAST_ON_SIGNAL, INSTEON_BFAST_OFF_SIGNAL },
+        { 0x9d,  0xfa, 0x97, 0x1ad, "Kitchen",     INSTEON_KITCHEN_ON_SIGNAL, INSTEON_KITCHEN_OFF_SIGNAL },
+        { 0x32, 0xfff,    0,  0x48, "Patio",       INSTEON_OUTSIDE_ON_SIGNAL, INSTEON_OUTSIDE_OFF_SIGNAL }
     };
     printf("starting\n");
     int cursorPosX = 0U;
@@ -386,7 +386,7 @@ int main(void)
 
     Thread InsteonHttpThread;
 
-    osStatus err = InsteonHttpThread.start(&http_setup);
+    osStatus err = InsteonHttpThread.start(&http_loop);
     if (err) {
         printf("Http Setup thread failed\n");
         assert(0);
@@ -406,7 +406,7 @@ int main(void)
                     const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
                     if ( regionName ) {
                         printf("In %s\n", regionName);       
-                        http_get();        
+                        InsteonHttpThread.signal_set(regions[i].on_signal);
                         break;
                     }
                 }
@@ -417,6 +417,5 @@ int main(void)
             printf("error reading touch controller\r\n");
         }
     }
-    http_stop();
 }
 
