@@ -35,6 +35,7 @@
 /*  Standard C Included Files */
 #include "mbed.h"
 #include <stdio.h>
+#include "stdio_thread.h"
 #include <string.h>
 #include "fsl_lcdc.h"
 #include "fsl_ft5406.h"
@@ -359,14 +360,14 @@ int main(void)
     status = APP_LCDC_Init();
     if (status != kStatus_Success)
     {
-        printf("LCD init failed\n");
+        safe_printf("LCD init failed\n");
     }
     assert(status == kStatus_Success);
     led2 = 0;
     status = APP_I2C_Init();
     if (status != kStatus_Success)
     {
-        printf("I2C init failed\n");
+        safe_printf("I2C init failed\n");
     }
     assert(status == kStatus_Success);
 
@@ -377,18 +378,18 @@ int main(void)
     status = FT5406_Init(&touch_handle, EXAMPLE_I2C_MASTER);
     if (status != kStatus_Success)
     {
-        printf("Touch panel init failed\n");
+        safe_printf("Touch panel init failed\n");
         
     }
     assert( status == kStatus_Success);
 
-    printf("Ready to go! joe\n");
+    safe_printf("Ready to go! joe\n");
 
     Thread InsteonHttpThread;
 
     osStatus err = InsteonHttpThread.start(&http_loop);
     if (err) {
-        printf("Http Setup thread failed\n");
+        safe_printf("Http Setup thread failed\n");
         assert(0);
     }
 
@@ -405,7 +406,7 @@ int main(void)
                 for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
                     const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
                     if ( regionName ) {
-                        printf("In %s\n", regionName);       
+                        safe_printf("In %s\n", regionName);       
                         InsteonHttpThread.signal_set(regions[i].on_signal);
                         break;
                     }
@@ -414,7 +415,7 @@ int main(void)
         }
         else
         {
-            printf("error reading touch controller\r\n");
+            safe_printf("error reading touch controller\r\n");
         }
     }
 }

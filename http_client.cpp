@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "stdio_thread.h"
 #include "mbed.h"
 #include "EthernetInterface.h"
 
@@ -23,12 +24,12 @@ EthernetInterface net;
 #define OUTSIDE_GROUP_NUMBER     22222
 
 void http_setup() {
-    printf("http_setup\n");
+    safe_printf("http_setup\n");
 
     net.connect();
 
     const char *ip = net.get_ip_address();
-    printf("IP address is %s\n", ip ? ip: "No IP");
+    safe_printf("IP address is %s\n", ip ? ip: "No IP");
 
     
 }
@@ -39,12 +40,12 @@ void http_get() {
     socket.connect("digg.com", 80);
     char sbuffer [] = "GET / HTTP/1.1\r\nHost: digg.com\r\n\r\n";
     int scount = socket.send(sbuffer, sizeof(sbuffer));
-    printf("sent %d [%.*s]\n", scount, strstr(sbuffer, "\r\n")-sbuffer, sbuffer);
+    safe_printf("sent %d [%.*s]\n", scount, strstr(sbuffer, "\r\n")-sbuffer, sbuffer);
 
     // Receive a simple http response
     char rbuffer[64];
     int rcount = socket.recv(rbuffer, sizeof(rbuffer));
-    printf("recv %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
+    safe_printf("recv %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
 
     socket.close();
 }
@@ -54,18 +55,18 @@ void insteon(uint32_t group, uint32_t command) {
     socket.open(&net);
     socket.connect(INSTEON_IP, 80);
     char sbuffer [1024];
-    sprintf(sbuffer, "GET /0?%lu%lu=I=0 HTTP/1.1\r\nHost: %s\r\n\r\n", command, group, INSTEON_IP);
+    safe_printf(sbuffer, "GET /0?%lu%lu=I=0 HTTP/1.1\r\nHost: %s\r\n\r\n", command, group, INSTEON_IP);
     int scount = socket.send(sbuffer, sizeof(sbuffer));
-    printf("sent %d [%.*s]\n", scount, strstr(sbuffer, "\r\n")-sbuffer, sbuffer);
+    safe_printf("sent %d [%.*s]\n", scount, strstr(sbuffer, "\r\n")-sbuffer, sbuffer);
 
     char rbuffer[64];
     int rcount = socket.recv(rbuffer, sizeof(rbuffer));
-    printf("recv %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
+    safe_printf("recv %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
     socket.close();
 }
 
 void turn_on_living_room() {
-    printf("Thread: turn on living room\n");
+    safe_printf("Thread: turn on living room\n");
     #ifdef USE_DIGG
     http_get();
     #else
@@ -74,7 +75,7 @@ void turn_on_living_room() {
 }
 
 void turn_off_living_room() {
-    printf("Thread: turn off living room\n");
+    safe_printf("Thread: turn off living room\n");
     #ifdef USE_DIGG
     http_get();
     #else
@@ -83,7 +84,7 @@ void turn_off_living_room() {
 }
 
 void turn_on_outside() {
-    printf("Thread: turn on outside\n");
+    safe_printf("Thread: turn on outside\n");
     #ifdef USE_DIGG
     http_get();
     #else
@@ -92,7 +93,7 @@ void turn_on_outside() {
 }
 
 void turn_off_outside() {
-    printf("Thread: turn off outside\n");
+    safe_printf("Thread: turn off outside\n");
     #ifdef USE_DIGG
     http_get();
     #else
@@ -115,11 +116,11 @@ SignalFunction signal_functions[] = {
 
 void http_loop() {
     http_setup();
-    printf("http_setup complete\n");
+    safe_printf("http_setup complete\n");
     while(true) {
-        printf("Http Thread waiting\n");
+        safe_printf("Http Thread waiting\n");
         osEvent wait_result = Thread::signal_wait(0);
-        printf("osEvent:%lx\n", wait_result.value.signals);
+        safe_printf("osEvent:%lx\n", wait_result.value.signals);
         int32_t signals = wait_result.value.signals;
         int32_t bit_count = 0;
         while(signals) {
@@ -127,7 +128,7 @@ void http_loop() {
                 if (signal_functions[bit_count]) {
                     signal_functions[bit_count]();
                 } else {
-                    printf("Unsupported signal received\n");
+                    safe_printf("Unsupported signal received\n");
                 }
             }
             bit_count++;
