@@ -391,7 +391,7 @@ int main(void)
         printf("Http Setup thread failed\n");
         assert(0);
     }
-    //http_setup();
+
     for (;;)
     {
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
