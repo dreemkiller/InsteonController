@@ -298,6 +298,8 @@ typedef struct RectangularRegion {
     uint32_t YMin;
     uint32_t YMax;
     const char *Name;
+    void (*on_function)();
+    void (*off_function)();
 } RectangularRegion;
 
 const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
@@ -313,10 +315,10 @@ int main(void)
     led2 = 1;
     led3 = 1;
     RectangularRegion regions[] = {
-        { 0x32, 0x9e, 0x48, 0x1ad, "Living Room"},
-        { 0x9d, 0xfa, 0x48, 0x97, "Breakfast" },
-        { 0x9d, 0xfa, 0x97, 0x1ad, "Kitchen"},
-        { 0x32, 0xfff, 0, 0x48, "Patio"}
+        { 0x32, 0x9e, 0x48, 0x1ad, "Living Room", turn_on_living_room, turn_off_living_room },
+        { 0x9d, 0xfa, 0x48, 0x97, "Breakfast", turn_on_living_room, turn_off_living_room },
+        { 0x9d, 0xfa, 0x97, 0x1ad, "Kitchen", turn_on_living_room, turn_off_living_room },
+        { 0x32, 0xfff, 0, 0x48, "Patio", turn_on_living_room, turn_off_living_room }
     };
     printf("starting\n");
     int cursorPosX = 0U;
