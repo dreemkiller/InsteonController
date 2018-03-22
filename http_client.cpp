@@ -6,11 +6,11 @@
 
 #include "http_client.h"
 
-#define USE_DIGG 1
+//#define USE_DIGG 0
 
 EthernetInterface net;
 
-#define INSTEON_IP "192.168.1.121"
+#define INSTEON_IP "192.168.0.123"
 #define INSTEON_ON 0x11 
 #define INSTEON_FAST_ON 0x12
 #define INSTEON_OFF 0x13
@@ -20,8 +20,12 @@ EthernetInterface net;
 #define INSTEON_START_DIM_BRIGHT 0x17
 #define INSTEON_STOP_DIM_BRIGHT 0x18
 
-#define LIVING_ROOM_GROUP_NUMBER 11111
+#define LIVING_ROOM_GROUP_NUMBER 0x264b78
 #define OUTSIDE_GROUP_NUMBER     22222
+
+#define INSTEON_PORT 25105
+
+
 
 void http_setup() {
     safe_printf("http_setup\n");
@@ -51,17 +55,19 @@ void http_get() {
 }
 
 void insteon(uint32_t group, uint32_t command) {
+    safe_printf("insteon called\n");
     TCPSocket socket;
     socket.open(&net);
-    socket.connect(INSTEON_IP, 80);
+    socket.connect(INSTEON_IP, INSTEON_PORT);
     char sbuffer [1024];
-    safe_printf(sbuffer, "GET /0?%lu%lu=I=0 HTTP/1.1\r\nHost: %s\r\n\r\n", command, group, INSTEON_IP);
+    sprintf(sbuffer, "GET /3?0262%06x0F%02xFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", group, command, INSTEON_IP, INSTEON_PORT);
+    safe_printf("sending:%s\n", sbuffer);   
     int scount = socket.send(sbuffer, sizeof(sbuffer));
     safe_printf("sent %d [%.*s]\n", scount, strstr(sbuffer, "\r\n")-sbuffer, sbuffer);
 
     char rbuffer[64];
     int rcount = socket.recv(rbuffer, sizeof(rbuffer));
-    safe_printf("recv %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
+    safe_printf("received: %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
     socket.close();
 }
 
