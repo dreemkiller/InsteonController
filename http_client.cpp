@@ -21,7 +21,7 @@ EthernetInterface net;
 #define INSTEON_STOP_DIM_BRIGHT 0x18
 
 #define LIVING_ROOM_GROUP_NUMBER 0x264b78
-#define OUTSIDE_GROUP_NUMBER     22222
+#define OUTSIDE_GROUP_NUMBER     0x2896d5
 
 #define INSTEON_PORT 25105
 
@@ -33,9 +33,7 @@ void http_setup() {
     net.connect();
 
     const char *ip = net.get_ip_address();
-    safe_printf("IP address is %s\n", ip ? ip: "No IP");
-
-    
+    safe_printf("IP address is %s\n", ip ? ip: "No IP");    
 }
 
 void http_get() {
@@ -57,8 +55,18 @@ void http_get() {
 void insteon(uint32_t group, uint32_t command) {
     safe_printf("insteon called\n");
     TCPSocket socket;
-    socket.open(&net);
-    socket.connect(INSTEON_IP, INSTEON_PORT);
+    int open_result = socket.open(&net);
+    if (open_result != 0) {
+        safe_printf("socket open failed:%d\n", open_result);
+        return;
+    }
+    safe_printf("socket opened\n");
+    int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
+    if (connect_result != 0) {
+        safe_printf("socket connect failed:%d\n", connect_result);
+        return;
+    }
+    safe_printf("socket connected\n");
     char sbuffer [1024];
     sprintf(sbuffer, "GET /3?0262%06x0F%02xFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", group, command, INSTEON_IP, INSTEON_PORT);
     safe_printf("sending:%s\n", sbuffer);   
@@ -68,7 +76,10 @@ void insteon(uint32_t group, uint32_t command) {
     char rbuffer[64];
     int rcount = socket.recv(rbuffer, sizeof(rbuffer));
     safe_printf("received: %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
-    socket.close();
+    int close_result = socket.close();
+    if (close_result != 0) {
+        safe_printf("close failed:%d\n", close_result);
+    }
 }
 
 void turn_on_living_room() {
