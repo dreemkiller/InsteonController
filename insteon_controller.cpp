@@ -73,6 +73,7 @@
 #define I2C_MASTER_SLAVE_ADDR_7BIT 0x7EU
 #define I2C_BAUDRATE 100000U
 
+#define MIN_DELAY_SECS 0.5f
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -393,6 +394,8 @@ int main(void)
         assert(0);
     }
 
+    Timer timer;
+    timer.start();
     for (;;)
     {
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
@@ -403,6 +406,14 @@ int main(void)
                 APP_SetCursorPosition(cursorPosY, cursorPosX);
             }
             if (touch_event == kTouch_Down) {
+                timer.stop();
+                if (timer.read() < MIN_DELAY_SECS) {
+                    safe_printf("Resetting timer and bailing\n");
+                    timer.start();
+                    continue;
+                }
+                safe_printf("Resetting timer and continuing\n");
+                timer.start();
                 for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
                     const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
                     if ( regionName ) {
