@@ -21,7 +21,8 @@ EthernetInterface net;
 #define INSTEON_STOP_DIM_BRIGHT 0x18
 
 //#define LIVING_ROOM_GROUP_NUMBER 0x264b78
-#define LIVING_ROOM_GROUP_NUMBER 0x02
+#define LIVING_ROOM_GROUP_NUMBER 0x08
+#define LIVING_ROOM_DEVICE_ID   0x264b78
 #define OUTSIDE_GROUP_NUMBER     0x2896d5
 #define KITCHEN_INSTEON_ID       0x46e275
 #define BREAKFAST_INSTEON_ID     0x46e4f9
@@ -68,13 +69,12 @@ void insteon(uint32_t id, IdType type, uint32_t command) {
         safe_printf("socket open failed:%d\n", open_result);
         return;
     }
-    safe_printf("socket opened\n");
     int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
     if (connect_result != 0) {
         safe_printf("socket connect failed:%d\n", connect_result);
+        socket.close();
         return;
     }
-    safe_printf("socket connected\n");
     char sbuffer [1024];
     if (type == DEVICE_ID) {
         sprintf(sbuffer, "GET /3?0262%06x0F%02xFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", id, command, INSTEON_IP, INSTEON_PORT);
@@ -82,10 +82,9 @@ void insteon(uint32_t id, IdType type, uint32_t command) {
         sprintf(sbuffer, "GET /0?%lu%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, INSTEON_IP, INSTEON_PORT);
     }
     safe_printf("sending:%s\n", sbuffer);   
-    int scount = socket.send(sbuffer, sizeof(sbuffer));
-    safe_printf("sent %d [%.*s]\n", scount, strstr(sbuffer, "\r\n")-sbuffer, sbuffer);
+    int scount = socket.send(sbuffer, strlen(sbuffer));
 
-    char rbuffer[64];
+    char rbuffer[1024];
     memset(rbuffer, 0, sizeof(rbuffer));
     int rcount = socket.recv(rbuffer, sizeof(rbuffer));
     safe_printf("received: %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
@@ -93,6 +92,7 @@ void insteon(uint32_t id, IdType type, uint32_t command) {
     int close_result = socket.close();
     if (close_result != 0) {
         safe_printf("close failed:%d\n", close_result);
+        return;
     }
 }
 
@@ -101,7 +101,7 @@ void turn_on_living_room() {
     #if USE_DIGG
     http_get();
     #else
-    insteon(LIVING_ROOM_GROUP_NUMBER, GROUP_ID, INSTEON_ON);
+    insteon(LIVING_ROOM_DEVICE_ID, DEVICE_ID, INSTEON_ON);
     #endif
 }
 
@@ -141,12 +141,30 @@ void turn_on_kitchen() {
     #endif
 }
 
+void turn_off_kitchen() {
+    safe_printf("Thread: turn off kitchen\n");
+    #if USE_DIGG
+    http_get();
+    #else
+    insteon(KITCHEN_INSTEON_ID, DEVICE_ID, INSTEON_OFF);
+    #endif
+}
+
 void turn_on_breakfast() {
     safe_printf("Thread: turn on breakfast\n");
     #if USE_DIGG
     http_get();
     #else
     insteon(BREAKFAST_INSTEON_ID, DEVICE_ID, INSTEON_ON);
+    #endif
+}
+
+void turn_off_breakfast() {
+    safe_printf("Thread: turn off breakfast\n");
+    #if USE_DIGG
+    http_get();
+    #else
+    insteon(BREAKFAST_INSTEON_ID, DEVICE_ID, INSTEON_OFF);
     #endif
 }
 
@@ -157,10 +175,10 @@ SignalFunction signal_functions[] = {
     turn_off_living_room,
     turn_on_outside,
     turn_off_outside,
-    http_get, // BFast on
-    http_get, // BFast off
+    turn_on_breakfast, // BFast on
+    turn_off_breakfast, // BFast off
     turn_on_kitchen, // Kitchen on
-    http_get, // Kitchen off
+    turn_off_kitchen, // Kitchen off
 };
 
 void http_loop() {
