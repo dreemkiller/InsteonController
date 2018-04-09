@@ -73,7 +73,8 @@
 #define I2C_MASTER_SLAVE_ADDR_7BIT 0x7EU
 #define I2C_BAUDRATE 100000U
 
-#define MIN_DELAY_SECS 0.5f
+#define MAX_DOUBLECLICK_DELAY 0.2f
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -311,17 +312,34 @@ const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
     }
     return NULL;
 }
+
+struct EventInfo {
+        bool active;
+        int x_pos;
+        int y_pos;
+        float last_event_time;
+        Timer click_timer;
+        Mutex click_mutex;
+
+    };
+struct EventInfo event_info = {false, 0, 0, 0.0f};
+
+void single_click_detect_loop();
+
+RectangularRegion regions[] = {
+    { 0x32,  0x9e, 0x48, 0x1ad, "Living Room", INSTEON_LIVING_ROOM_ON_SIGNAL, INSTEON_LIVING_ROOM_OFF_SIGNAL },
+    { 0x9d,  0xfa, 0x48,  0x97, "Breakfast",   INSTEON_BFAST_ON_SIGNAL, INSTEON_BFAST_OFF_SIGNAL },
+    { 0x9d,  0xfa, 0x97, 0x1ad, "Kitchen",     INSTEON_KITCHEN_ON_SIGNAL, INSTEON_KITCHEN_OFF_SIGNAL },
+    { 0x32, 0xfff,    0,  0x48, "Patio",       INSTEON_OUTSIDE_ON_SIGNAL, INSTEON_OUTSIDE_OFF_SIGNAL }
+};
+
+Thread InsteonHttpThread;
+
 int main(void)
 {
     led1 = 1;
     led2 = 1;
     led3 = 1;
-    RectangularRegion regions[] = {
-        { 0x32,  0x9e, 0x48, 0x1ad, "Living Room", INSTEON_LIVING_ROOM_ON_SIGNAL, INSTEON_LIVING_ROOM_OFF_SIGNAL },
-        { 0x9d,  0xfa, 0x48,  0x97, "Breakfast",   INSTEON_BFAST_ON_SIGNAL, INSTEON_BFAST_OFF_SIGNAL },
-        { 0x9d,  0xfa, 0x97, 0x1ad, "Kitchen",     INSTEON_KITCHEN_ON_SIGNAL, INSTEON_KITCHEN_OFF_SIGNAL },
-        { 0x32, 0xfff,    0,  0x48, "Patio",       INSTEON_OUTSIDE_ON_SIGNAL, INSTEON_OUTSIDE_OFF_SIGNAL }
-    };
     printf("starting\n");
     int cursorPosX = 0U;
     int cursorPosY = 0U;
@@ -386,16 +404,27 @@ int main(void)
 
     safe_printf("Ready to go! joe\n");
 
-    Thread InsteonHttpThread;
-
     osStatus err = InsteonHttpThread.start(&http_loop);
     if (err) {
         safe_printf("Http Setup thread failed\n");
         assert(0);
     }
 
-    Timer timer;
-    timer.start();
+    event_info.active = false;
+    event_info.x_pos = 0;
+    event_info.y_pos = 0;
+
+    event_info.click_timer.start();
+    event_info.last_event_time = event_info.click_timer.read();
+
+    Thread single_click_detect_thread;
+    err = single_click_detect_thread.start(&single_click_detect_loop);
+    if (err) {
+        safe_printf("single_click_detect thread failed\n");
+        assert(0);
+    }
+
+
     for (;;)
     {
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
@@ -406,27 +435,58 @@ int main(void)
                 APP_SetCursorPosition(cursorPosY, cursorPosX);
             }
             if (touch_event == kTouch_Down) {
-                timer.stop();
-                if (timer.read() < MIN_DELAY_SECS) {
-                    safe_printf("Resetting timer and bailing\n");
-                    timer.start();
-                    continue;
-                }
-                safe_printf("Resetting timer and continuing\n");
-                timer.start();
-                for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
-                    const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
-                    if ( regionName ) {
-                        safe_printf("In %s\n", regionName);       
-                        InsteonHttpThread.signal_set(regions[i].on_signal);
-                        break;
+                event_info.click_mutex.lock();
+                event_info.x_pos = cursorPosX;
+                event_info.y_pos = cursorPosY;
+                float current_time = event_info.click_timer.read();
+                if (event_info.active && (current_time - event_info.last_event_time) < MAX_DOUBLECLICK_DELAY) {
+                    safe_printf("Second click detected\n");
+                    event_info.active = false;
+                    // We've got a doubleclick event
+                    for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
+                        const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
+                        if ( regionName ) {
+                            safe_printf("Double Click In %s\n", regionName);       
+                            InsteonHttpThread.signal_set(regions[i].off_signal);
+                            break;
+                        }
                     }
+                } else {
+                    safe_printf("First click detected\n");
+                    event_info.click_timer.stop();
+                    event_info.click_timer.start();
+                    event_info.last_event_time = event_info.click_timer.read();
+                    event_info.active = true;
+                    event_info.x_pos = cursorPosX;
+                    event_info.y_pos = cursorPosY;
                 }
+                event_info.click_mutex.unlock();
             }
         }
         else
         {
             safe_printf("error reading touch controller\r\n");
+        }
+        
+    }
+}
+
+void single_click_detect_loop() {
+    while(1) {
+        float current_time = event_info.click_timer.read();
+        if (event_info.active && ((current_time - event_info.last_event_time) > MAX_DOUBLECLICK_DELAY)) {
+            event_info.click_mutex.lock();
+            event_info.active = false;
+            event_info.last_event_time = current_time;
+            for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
+                const char *regionName = checkRegion(regions[i], event_info.x_pos, event_info.y_pos);
+                if ( regionName ) {
+                    safe_printf("Single Click In %s\n", regionName);
+                    InsteonHttpThread.signal_set(regions[i].on_signal);
+                    break;
+                }
+            }
+            event_info.click_mutex.unlock();
         }
     }
 }
