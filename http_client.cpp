@@ -77,12 +77,15 @@ void insteon(uint32_t id, IdType type, uint32_t command) {
     }
     char sbuffer [1024];
     if (type == DEVICE_ID) {
-        sprintf(sbuffer, "GET /3?0262%06x0F%02xFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", id, command, INSTEON_IP, INSTEON_PORT);
+        sprintf(sbuffer, "GET /3?0262%06lx0F%02lxFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", id, command, INSTEON_IP, INSTEON_PORT);
     } else {
         sprintf(sbuffer, "GET /0?%lu%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, INSTEON_IP, INSTEON_PORT);
     }
     safe_printf("sending:%s\n", sbuffer);   
     int scount = socket.send(sbuffer, strlen(sbuffer));
+    if (scount == 0) {
+        safe_printf("Failed to send\n");
+    }
 
     char rbuffer[1024];
     memset(rbuffer, 0, sizeof(rbuffer));
@@ -110,7 +113,7 @@ void turn_off_living_room() {
     #if USE_DIGG
     http_get();
     #else
-    insteon(LIVING_ROOM_GROUP_NUMBER, DEVICE_ID, INSTEON_OFF);
+    insteon(LIVING_ROOM_DEVICE_ID, DEVICE_ID, INSTEON_OFF);
     #endif
 }
 
