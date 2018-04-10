@@ -75,6 +75,8 @@
 
 #define MAX_DOUBLECLICK_DELAY 0.2f
 
+#define SCREENSAVER_WAIT_TIME 120.0f
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -97,7 +99,8 @@ void *vram_ptr = s_frameBufs;
 static volatile bool s_frameEndFlag;
 
 /* Color palette. */
-static const uint32_t palette[] = {0x0000001F};
+//static const uint32_t palette[] = {0x0000001F};
+static const uint32_t palette[] = {0x0000ffff};
 
 /* 32x32 pixel cursor image. */
 #if (defined(__CC_ARM) || defined(__GNUC__))
@@ -107,72 +110,6 @@ __attribute__((aligned(4)))
 #else
 #error Toolchain not support.
 #endif
-static const uint8_t cursor32Img0[] = {
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 1.  */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 2.  */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 3.  */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 4.  */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 5.  */
-    0xAA, 0xAA, 0xAA, 0xFA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 6.  */
-    0xAA, 0xAA, 0xAB, 0xFE, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 7.  */
-    0xAA, 0xAA, 0xAB, 0xFE, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 8.  */
-    0xAA, 0xAA, 0xAB, 0xFE, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 9.  */
-    0xAA, 0xAA, 0xAB, 0xFE, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 10  */
-    0xAA, 0xAA, 0xAB, 0xFF, 0xEA,
-    0xAA, 0xAA, 0xAA, /* Line 11. */
-    0xAA, 0xAA, 0xAB, 0xFF, 0xFF,
-    0xAA, 0xAA, 0xAA, /* Line 12. */
-    0xAA, 0xAA, 0xAB, 0xFF, 0xFF,
-    0xFA, 0xAA, 0xAA, /* Line 13. */
-    0xAA, 0xAA, 0xAB, 0xFF, 0xFF,
-    0xFE, 0xAA, 0xAA, /* Line 14. */
-    0xAA, 0xAB, 0xFB, 0xFF, 0xFF,
-    0xFF, 0xAA, 0xAA, /* Line 15. */
-    0xAA, 0xAB, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xAA, 0xAA, /* Line 16. */
-    0xAA, 0xAB, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xAA, 0xAA, /* Line 17. */
-    0xAA, 0xAA, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xAA, 0xAA, /* Line 18. */
-    0xAA, 0xAA, 0xBF, 0xFF, 0xFF,
-    0xFF, 0xAA, 0xAA, /* Line 19. */
-    0xAA, 0xAA, 0xBF, 0xFF, 0xFF,
-    0xFF, 0xAA, 0xAA, /* Line 20. */
-    0xAA, 0xAA, 0xAF, 0xFF, 0xFF,
-    0xFF, 0xAA, 0xAA, /* Line 21. */
-    0xAA, 0xAA, 0xAF, 0xFF, 0xFF,
-    0xFE, 0xAA, 0xAA, /* Line 22. */
-    0xAA, 0xAA, 0xAB, 0xFF, 0xFF,
-    0xFE, 0xAA, 0xAA, /* Line 23. */
-    0xAA, 0xAA, 0xAB, 0xFF, 0xFF,
-    0xFE, 0xAA, 0xAA, /* Line 24. */
-    0xAA, 0xAA, 0xAA, 0xFF, 0xFF,
-    0xFA, 0xAA, 0xAA, /* Line 25. */
-    0xAA, 0xAA, 0xAA, 0xFF, 0xFF,
-    0xFA, 0xAA, 0xAA, /* Line 26. */
-    0xAA, 0xAA, 0xAA, 0xFF, 0xFF,
-    0xFA, 0xAA, 0xAA, /* Line 27. */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 28. */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 29. */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 30. */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA, /* Line 31. */
-    0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
-    0xAA, 0xAA, 0xAA /* Line 32. */
-};
 
 /*******************************************************************************
  * Code
@@ -263,36 +200,14 @@ status_t APP_LCDC_Init(void)
 
     LCDC_SetPalette(APP_LCD, palette, ARRAY_SIZE(palette));
 
-    /* Setup the Cursor. */
-    LCDC_CursorGetDefaultConfig(&cursorConfig);
-
-    cursorConfig.size = kLCDC_CursorSize32;
-    cursorConfig.syncMode = kLCDC_CursorSync;
-    cursorConfig.image[0] = (uint32_t *)cursor32Img0;
-
-    LCDC_SetCursorConfig(APP_LCD, &cursorConfig);
-    LCDC_ChooseCursor(APP_LCD, 0);
-
     /* Trigger interrupt at start of every vertical back porch. */
     LCDC_SetVerticalInterruptMode(APP_LCD, kLCDC_StartOfBackPorch);
     LCDC_EnableInterrupts(APP_LCD, kLCDC_VerticalCompareInterrupt);
-    //NVIC_EnableIRQ(APP_LCD_IRQn);
-
-    LCDC_EnableCursor(APP_LCD, true);
-
-    
+ 
     LCDC_Start(APP_LCD);
     LCDC_PowerUp(APP_LCD);
     led1 = 0;
     return kStatus_Success;
-}
-
-void APP_SetCursorPosition(int posX, int posY)
-{
-    posX -= 12;
-    posY -= 5;
-
-    LCDC_SetCursorPosition(APP_LCD, posX, posY);
 }
 
 typedef struct RectangularRegion {
@@ -326,6 +241,8 @@ struct EventInfo event_info = {false, 0, 0, 0.0f};
 
 void single_click_detect_loop();
 
+void screen_saver_loop();
+
 RectangularRegion regions[] = {
     { 0x32,  0x9e, 0x48, 0x1ad, "Living Room", INSTEON_LIVING_ROOM_ON_SIGNAL, INSTEON_LIVING_ROOM_OFF_SIGNAL },
     { 0x9d,  0xfa, 0x48,  0x97, "Breakfast",   INSTEON_BFAST_ON_SIGNAL, INSTEON_BFAST_OFF_SIGNAL },
@@ -334,6 +251,9 @@ RectangularRegion regions[] = {
 };
 
 Thread InsteonHttpThread;
+
+void turn_off_screensaver();
+bool screensaver_on;
 
 int main(void)
 {
@@ -424,17 +344,23 @@ int main(void)
         assert(0);
     }
 
+    Thread screensaver_thread;
+    err = screensaver_thread.start(&screen_saver_loop);
+    if (err) {
+        safe_printf("screen saver thread failed to start\n");
+        assert(0);
+    }
+    screensaver_on = false;
 
     for (;;)
     {
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
         {
-            if ((touch_event == kTouch_Down) || (touch_event == kTouch_Contact))
-            {
-                /* Update cursor position */
-                APP_SetCursorPosition(cursorPosY, cursorPosX);
-            }
             if (touch_event == kTouch_Down) {
+                if (screensaver_on) {
+                    turn_off_screensaver();
+                    continue;
+                }
                 event_info.click_mutex.lock();
                 event_info.x_pos = cursorPosX;
                 event_info.y_pos = cursorPosY;
@@ -491,3 +417,23 @@ void single_click_detect_loop() {
     }
 }
 
+void turn_on_screensaver() {
+    screensaver_on = true;
+    LCDC_PowerDown(APP_LCD);
+}
+
+void turn_off_screensaver() {
+    screensaver_on = false;
+    LCDC_PowerUp(APP_LCD);
+}
+
+void screen_saver_loop() {
+    while(1) {
+        wait(SCREENSAVER_WAIT_TIME);
+        float current_time = event_info.click_timer.read();
+        if ((current_time - event_info.last_event_time) > SCREENSAVER_WAIT_TIME) {
+            safe_printf("Turning on screensaver\n");
+            turn_on_screensaver();
+        } 
+    }
+}
