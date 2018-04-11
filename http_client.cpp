@@ -21,7 +21,7 @@ EthernetInterface net;
 #define INSTEON_STOP_DIM_BRIGHT 0x18
 
 //#define LIVING_ROOM_GROUP_NUMBER 0x264b78
-#define LIVING_ROOM_GROUP_NUMBER 0x08
+#define LIVING_ROOM_GROUP_ID 0x08
 #define LIVING_ROOM_DEVICE_ID   0x264b78
 #define OUTSIDE_GROUP_NUMBER     0x2896d5
 #define KITCHEN_INSTEON_ID       0x46e275
@@ -78,8 +78,10 @@ void insteon(uint32_t id, IdType type, uint32_t command) {
     char sbuffer [1024];
     if (type == DEVICE_ID) {
         sprintf(sbuffer, "GET /3?0262%06lx0F%02lxFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", id, command, INSTEON_IP, INSTEON_PORT);
+    } else if (type == GROUP_ID) {
+        sprintf(sbuffer, "GET /0?%lx%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, INSTEON_IP, INSTEON_PORT);
     } else {
-        sprintf(sbuffer, "GET /0?%lu%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, INSTEON_IP, INSTEON_PORT);
+        assert(0);
     }
     safe_printf("sending:%s\n", sbuffer);   
     int scount = socket.send(sbuffer, strlen(sbuffer));
@@ -104,7 +106,8 @@ void turn_on_living_room() {
     #if USE_DIGG
     http_get();
     #else
-    insteon(LIVING_ROOM_DEVICE_ID, DEVICE_ID, INSTEON_ON);
+    //insteon(LIVING_ROOM_DEVICE_ID, DEVICE_ID, INSTEON_ON);
+    insteon(LIVING_ROOM_GROUP_ID, GROUP_ID, INSTEON_ON);
     #endif
 }
 
@@ -113,7 +116,8 @@ void turn_off_living_room() {
     #if USE_DIGG
     http_get();
     #else
-    insteon(LIVING_ROOM_DEVICE_ID, DEVICE_ID, INSTEON_OFF);
+    //insteon(LIVING_ROOM_DEVICE_ID, DEVICE_ID, INSTEON_OFF);
+    insteon(LIVING_ROOM_GROUP_ID, GROUP_ID, INSTEON_OFF);
     #endif
 }
 
