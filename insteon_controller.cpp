@@ -171,6 +171,7 @@ status_t APP_I2C_Init(void)
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
 DigitalOut led3(LED3);
+DigitalOut backlight(P3_31);
 
 status_t APP_LCDC_Init(void)
 {
@@ -207,6 +208,7 @@ status_t APP_LCDC_Init(void)
     LCDC_Start(APP_LCD);
     LCDC_PowerUp(APP_LCD);
     led1 = 0;
+    backlight = 1;
     return kStatus_Success;
 }
 
@@ -419,11 +421,15 @@ void single_click_detect_loop() {
 
 void turn_on_screensaver() {
     screensaver_on = true;
+    backlight = 0;
     LCDC_PowerDown(APP_LCD);
+    LCDC_Stop(APP_LCD);
 }
 
 void turn_off_screensaver() {
+    backlight = 1;
     screensaver_on = false;
+    LCDC_Start(APP_LCD);
     LCDC_PowerUp(APP_LCD);
 }
 
