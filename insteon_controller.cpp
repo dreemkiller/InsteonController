@@ -45,6 +45,7 @@
 #include "pin_mux.h"
 #include "floorplan_image.h"
 #include "http_client.h"
+#include "floorplan_regions.h"
 
 /*******************************************************************************
  * Definitions
@@ -92,8 +93,6 @@ __attribute__((aligned(8)))
 #else
 #error Toolchain not support.
 #endif
-
-void *vram_ptr = s_frameBufs;
 
 /* Frame end flag. */
 static volatile bool s_frameEndFlag;
@@ -173,11 +172,13 @@ DigitalOut led2(LED2);
 DigitalOut led3(LED3);
 DigitalOut backlight(P3_31);
 
+uint32_t padding;
+extern const char _binary_Floorplan_bmp_start;
+
 status_t APP_LCDC_Init(void)
 {
     /* Initialize the display. */
     lcdc_config_t lcdConfig;
-    lcdc_cursor_config_t cursorConfig;
 
     LCDC_GetDefaultConfig(&lcdConfig);
 
@@ -191,7 +192,9 @@ status_t APP_LCDC_Init(void)
     lcdConfig.vfp = LCD_VFP;
     lcdConfig.vbp = LCD_VBP;
     lcdConfig.polarityFlags = LCD_POL_FLAGS;
-    lcdConfig.upperPanelAddr = (uint32_t)s_frameBufs;
+    //lcdConfig.upperPanelAddr = (uint32_t)s_frameBufs;
+    safe_printf("_binary_Floorplan_bmp_start:%x\n", &_binary_Floorplan_bmp_start + 4);
+    lcdConfig.upperPanelAddr = (uint32_t)(&_binary_Floorplan_bmp_start + 4);
     lcdConfig.bpp = kLCDC_1BPP;
     lcdConfig.display = kLCDC_DisplayTFT;
     lcdConfig.swapRedBlue = true;
@@ -212,15 +215,7 @@ status_t APP_LCDC_Init(void)
     return kStatus_Success;
 }
 
-typedef struct RectangularRegion {
-    uint32_t XMin;
-    uint32_t XMax;
-    uint32_t YMin;
-    uint32_t YMax;
-    const char *Name;
-    int32_t on_signal;
-    int32_t off_signal;
-} RectangularRegion;
+
 
 const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
     if (region.XMin < x && x < region.XMax && 
@@ -245,12 +240,8 @@ void single_click_detect_loop();
 
 void screen_saver_loop();
 
-RectangularRegion regions[] = {
-    { 0x32,  0x9e, 0x48, 0x1ad, "Living Room", INSTEON_LIVING_ROOM_ON_SIGNAL, INSTEON_LIVING_ROOM_OFF_SIGNAL },
-    { 0x9d,  0xfa, 0x48,  0x97, "Breakfast",   INSTEON_BFAST_ON_SIGNAL, INSTEON_BFAST_OFF_SIGNAL },
-    { 0x9d,  0xfa, 0x97, 0x1ad, "Kitchen",     INSTEON_KITCHEN_ON_SIGNAL, INSTEON_KITCHEN_OFF_SIGNAL },
-    { 0x32, 0xfff,    0,  0x48, "Patio",       INSTEON_OUTSIDE_ON_SIGNAL, INSTEON_OUTSIDE_OFF_SIGNAL }
-};
+extern RectangularRegion floorplan_regions[];
+extern uint32_t num_floorplan_regions;
 
 Thread InsteonHttpThread;
 
@@ -359,6 +350,7 @@ int main(void)
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
         {
             if (touch_event == kTouch_Down) {
+                safe_printf("X:%d Y:%d\n", cursorPosX, cursorPosY);
                 if (screensaver_on) {
                     turn_off_screensaver();
                     continue;
@@ -371,11 +363,11 @@ int main(void)
                     safe_printf("Second click detected\n");
                     event_info.active = false;
                     // We've got a doubleclick event
-                    for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
-                        const char *regionName = checkRegion(regions[i], cursorPosX, cursorPosY);
+                    for (size_t i = 0; i < num_floorplan_regions; i++) {
+                        const char *regionName = checkRegion(floorplan_regions[i], cursorPosX, cursorPosY);
                         if ( regionName ) {
                             safe_printf("Double Click In %s\n", regionName);       
-                            InsteonHttpThread.signal_set(regions[i].off_signal);
+                            InsteonHttpThread.signal_set(floorplan_regions[i].off_signal);
                             break;
                         }
                     }
@@ -406,11 +398,11 @@ void single_click_detect_loop() {
             event_info.click_mutex.lock();
             event_info.active = false;
             event_info.last_event_time = current_time;
-            for (size_t i = 0; i < sizeof(regions) / sizeof(regions[0]); i++) {
-                const char *regionName = checkRegion(regions[i], event_info.x_pos, event_info.y_pos);
+            for (size_t i = 0; i < num_floorplan_regions; i++) {
+                const char *regionName = checkRegion(floorplan_regions[i], event_info.x_pos, event_info.y_pos);
                 if ( regionName ) {
                     safe_printf("Single Click In %s\n", regionName);
-                    InsteonHttpThread.signal_set(regions[i].on_signal);
+                    InsteonHttpThread.signal_set(floorplan_regions[i].on_signal);
                     break;
                 }
             }
