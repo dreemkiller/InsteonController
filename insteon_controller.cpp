@@ -316,7 +316,7 @@ int main(void)
 
     safe_printf("Ready to go! joe\n");
 
-    osStatus err = InsteonHttpThread.start(&http_loop);
+    osStatus err = InsteonHttpThread.start(&insteon_loop);
     if (err) {
         safe_printf("Http Setup thread failed\n");
         assert(0);
