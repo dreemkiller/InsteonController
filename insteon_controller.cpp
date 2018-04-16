@@ -43,7 +43,6 @@
 #include "fsl_gpio.h"
 #include "board.h"
 #include "pin_mux.h"
-#include "floorplan_image.h"
 #include "http_client.h"
 #include "floorplan_regions.h"
 
