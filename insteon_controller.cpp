@@ -43,7 +43,7 @@
 #include "fsl_gpio.h"
 #include "board.h"
 #include "pin_mux.h"
-#include "http_client.h"
+
 #include "floorplan_regions.h"
 
 /*******************************************************************************
@@ -97,17 +97,7 @@ __attribute__((aligned(8)))
 static volatile bool s_frameEndFlag;
 
 /* Color palette. */
-//static const uint32_t palette[] = {0x0000001F};
 static const uint32_t palette[] = {0x0000ffff};
-
-/* 32x32 pixel cursor image. */
-#if (defined(__CC_ARM) || defined(__GNUC__))
-__attribute__((aligned(4)))
-#elif defined(__ICCARM__)
-#pragma data_alignment = 4
-#else
-#error Toolchain not support.
-#endif
 
 /*******************************************************************************
  * Code
@@ -286,8 +276,6 @@ int main(void)
     /* Set the back light PWM. */
     BOARD_InitPWM();
 
-    //APP_FillBuffer((void *)(s_frameBufs));
-
     status = APP_LCDC_Init();
     if (status != kStatus_Success)
     {
@@ -303,7 +291,6 @@ int main(void)
     assert(status == kStatus_Success);
 
     GPIO_PinInit(GPIO, 2, 27, &pin_config);
-    //GPIO_PinWrite(GPIO, 2, 27, 1);
     GPIO->B[2][27] = 1;
     
     status = FT5406_Init(&touch_handle, EXAMPLE_I2C_MASTER);

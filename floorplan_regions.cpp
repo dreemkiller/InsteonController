@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "floorplan_regions.h"
-#include "http_client.h"
 #include "insteon_interface.h"
 
 uint32_t num_floorplan_regions = 4;

@@ -11,5 +11,8 @@ struct InsteonArguments {
     IdType type;
 };
 
+#define INSTEON_ON 0x11 
+#define INSTEON_OFF 0x13
+
 void insteon_loop();
 #endif // __INSTEON_INTERFACE_H__

@@ -4,8 +4,6 @@
 #include "mbed.h"
 #include "EthernetInterface.h"
 
-#include "http_client.h"
-
 #include "insteon_interface.h"
 #include "floorplan_regions.h"
 
@@ -17,12 +15,8 @@ extern uint32_t num_floorplan_regions;
 EthernetInterface net;
 
 #define INSTEON_IP "192.168.0.100"
-#define INSTEON_ON 0x11 
-#define INSTEON_OFF 0x13
 
 #define INSTEON_PORT 25105
-
-
 
 void insteon_setup() {
     safe_printf("insteon_setup\n");
