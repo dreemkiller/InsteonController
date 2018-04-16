@@ -44,30 +44,15 @@
 #include "board.h"
 #include "pin_mux.h"
 
+#include "lcd.h"
 #include "floorplan_regions.h"
 
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-#define APP_LCD LCD
-#define LCD_PANEL_CLK 9000000
-#define LCD_PPL 480
-#define LCD_HSW 2
-#define LCD_HFP 8
-#define LCD_HBP 43
-#define LCD_LPP 272
-#define LCD_VSW 10
-#define LCD_VFP 4
-#define LCD_VBP 12
-#define LCD_POL_FLAGS kLCDC_InvertVsyncPolarity | kLCDC_InvertHsyncPolarity
-#define IMG_HEIGHT 272
-#define IMG_WIDTH 480
-#define LCD_INPUT_CLK_FREQ CLOCK_GetFreq(kCLOCK_LCD)
-#define APP_LCD_IRQHandler LCD_IRQHandler
-#define APP_LCD_IRQn LCD_IRQn
+
 #define EXAMPLE_I2C_MASTER_BASE (I2C2_BASE)
 #define I2C_MASTER_CLOCK_FREQUENCY (12000000)
-#define APP_PIXEL_PER_BYTE 8
 
 #define EXAMPLE_I2C_MASTER ((I2C_Type *)EXAMPLE_I2C_MASTER_BASE)
 #define I2C_MASTER_SLAVE_ADDR_7BIT 0x7EU
@@ -75,33 +60,7 @@
 
 #define MAX_DOUBLECLICK_DELAY 0.2f
 
-#define SCREENSAVER_WAIT_TIME 120.0f
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-
-/*******************************************************************************
- * Variables
- ******************************************************************************/
-
-#if (defined(__CC_ARM) || defined(__GNUC__))
-__attribute__((aligned(8)))
-#elif defined(__ICCARM__)
-#pragma data_alignment = 8
-#else
-#error Toolchain not support.
-#endif
-
-/* Frame end flag. */
-static volatile bool s_frameEndFlag;
-
-/* Color palette. */
-static const uint32_t palette[] = {0x0000ffff};
-
-/*******************************************************************************
- * Code
- ******************************************************************************/
  static void BOARD_InitPWM(void)
 {
     sctimer_config_t config;
@@ -123,23 +82,6 @@ static const uint32_t palette[] = {0x0000ffff};
     SCTIMER_SetupPwm(SCT0, &pwmParam, kSCTIMER_CenterAlignedPwm, 1000U, CLOCK_GetFreq(kCLOCK_Sct), &event);
 }
 
-void APP_LCD_IRQHandler(void)
-{
-    uint32_t intStatus = LCDC_GetEnabledInterruptsPendingStatus(APP_LCD);
-
-    LCDC_ClearInterruptsStatus(APP_LCD, intStatus);
-
-    if (intStatus & kLCDC_VerticalCompareInterrupt)
-    {
-        s_frameEndFlag = true;
-    }
-    __DSB();
-    /* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
-      exception return operation might vector to incorrect interrupt */
-#if defined __CORTEX_M && (__CORTEX_M == 4U)
-    __DSB();
-#endif
-}
 
 status_t APP_I2C_Init(void)
 {
@@ -159,52 +101,8 @@ status_t APP_I2C_Init(void)
 DigitalOut led1(LED1);
 DigitalOut led2(LED2);
 DigitalOut led3(LED3);
-DigitalOut backlight(P3_31);
 
-uint32_t padding;
 extern const char _binary_Floorplan_bmp_start;
-
-status_t APP_LCDC_Init(void)
-{
-    /* Initialize the display. */
-    lcdc_config_t lcdConfig;
-
-    LCDC_GetDefaultConfig(&lcdConfig);
-
-    lcdConfig.panelClock_Hz = LCD_PANEL_CLK;
-    lcdConfig.ppl = LCD_PPL;
-    lcdConfig.hsw = LCD_HSW;
-    lcdConfig.hfp = LCD_HFP;
-    lcdConfig.hbp = LCD_HBP;
-    lcdConfig.lpp = LCD_LPP;
-    lcdConfig.vsw = LCD_VSW;
-    lcdConfig.vfp = LCD_VFP;
-    lcdConfig.vbp = LCD_VBP;
-    lcdConfig.polarityFlags = LCD_POL_FLAGS;
-    //lcdConfig.upperPanelAddr = (uint32_t)s_frameBufs;
-    safe_printf("_binary_Floorplan_bmp_start:%x\n", &_binary_Floorplan_bmp_start + 4);
-    lcdConfig.upperPanelAddr = (uint32_t)(&_binary_Floorplan_bmp_start + 4);
-    lcdConfig.bpp = kLCDC_1BPP;
-    lcdConfig.display = kLCDC_DisplayTFT;
-    lcdConfig.swapRedBlue = true;
-    lcdConfig.dataFormat = kLCDC_WinCeMode;
-
-    LCDC_Init(APP_LCD, &lcdConfig, LCD_INPUT_CLK_FREQ);
-
-    LCDC_SetPalette(APP_LCD, palette, ARRAY_SIZE(palette));
-
-    /* Trigger interrupt at start of every vertical back porch. */
-    LCDC_SetVerticalInterruptMode(APP_LCD, kLCDC_StartOfBackPorch);
-    LCDC_EnableInterrupts(APP_LCD, kLCDC_VerticalCompareInterrupt);
- 
-    LCDC_Start(APP_LCD);
-    LCDC_PowerUp(APP_LCD);
-    led1 = 0;
-    backlight = 1;
-    return kStatus_Success;
-}
-
-
 
 const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
     if (region.XMin < x && x < region.XMax && 
@@ -215,27 +113,29 @@ const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
 }
 
 struct EventInfo {
-        bool active;
-        int x_pos;
-        int y_pos;
-        float last_event_time;
-        Timer click_timer;
-        Mutex click_mutex;
-
-    };
+    bool active;
+    int x_pos;
+    int y_pos;
+    float last_event_time;
+    Timer click_timer;
+    Mutex click_mutex;
+};
 struct EventInfo event_info = {false, 0, 0, 0.0f};
 
 void single_click_detect_loop();
-
-void screen_saver_loop();
 
 extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
 
 Thread InsteonHttpThread;
 
-void turn_off_screensaver();
+extern bool screensaver_on;
+
 bool screensaver_on;
+#define SCREENSAVER_WAIT_TIME 120.0f
+extern DigitalOut backlight;
+void screen_saver_loop();
+void turn_off_screensaver();
 
 int main(void)
 {
