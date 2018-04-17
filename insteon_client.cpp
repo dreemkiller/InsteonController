@@ -4,7 +4,7 @@
 #include "mbed.h"
 #include "EthernetInterface.h"
 
-#include "insteon_interface.h"
+#include "insteon_client.h"
 #include "floorplan_regions.h"
 
 extern RectangularRegion floorplan_regions[];

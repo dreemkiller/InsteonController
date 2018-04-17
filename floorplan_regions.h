@@ -1,6 +1,6 @@
 #ifndef __FLOORPLAN_REGIONS_H__
 #define __FLOORPLAN_REGIONS_H__
-#include "insteon_interface.h"
+#include "insteon_client.h"
 
 typedef struct RectangularRegion {
     uint32_t XMin;

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "floorplan_regions.h"
-#include "insteon_interface.h"
+#include "insteon_client.h"
 
 uint32_t num_floorplan_regions = 4;
 RectangularRegion floorplan_regions[] = {
