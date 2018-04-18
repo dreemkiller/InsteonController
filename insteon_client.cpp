@@ -10,8 +10,6 @@
 extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
 
-#define USE_DIGG 0
-
 EthernetInterface net;
 
 #define INSTEON_IP "192.168.0.100"
