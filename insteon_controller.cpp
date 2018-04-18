@@ -119,7 +119,6 @@ struct EventInfo {
     Timer click_timer;
     Mutex click_mutex;
 };
-struct EventInfo event_info = {false, 0, 0, 0.0f};
 
 void single_click_detect_loop();
 
@@ -133,8 +132,9 @@ extern bool screensaver_on;
 bool screensaver_on;
 #define SCREENSAVER_WAIT_TIME 120.0f
 extern DigitalOut backlight;
-void screen_saver_loop();
+void screensaver_loop();
 void turn_off_screensaver();
+Timer screensaver_timer;
 
 int main(void)
 {
@@ -208,15 +208,9 @@ int main(void)
         assert(0);
     }
 
-    event_info.active = false;
-    event_info.x_pos = 0;
-    event_info.y_pos = 0;
-
-    event_info.click_timer.start();
-    event_info.last_event_time = event_info.click_timer.read();
-
     Thread screensaver_thread;
-    err = screensaver_thread.start(&screen_saver_loop);
+    screensaver_timer.start();
+    err = screensaver_thread.start(&screensaver_loop);
     if (err) {
         safe_printf("screen saver thread failed to start\n");
         assert(0);
@@ -230,6 +224,8 @@ int main(void)
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
         {
             if (touch_event == kTouch_Down) {
+                safe_printf("Resetting screensaver_timer\n");
+                screensaver_timer.reset();
                 if (screensaver_on) {
                     safe_printf("Turning off screensaver\n");
                     turn_off_screensaver();
@@ -266,7 +262,7 @@ int main(void)
                             }
                         }
                     }
-                }   
+                }
             }
         }
         else
@@ -291,11 +287,11 @@ void turn_off_screensaver() {
     LCDC_PowerUp(APP_LCD);
 }
 
-void screen_saver_loop() {
+void screensaver_loop() {
     while(1) {
         wait(SCREENSAVER_WAIT_TIME);
-        float current_time = event_info.click_timer.read();
-        if ((current_time - event_info.last_event_time) > SCREENSAVER_WAIT_TIME) {
+        float elapsed_time = screensaver_timer.read();
+        if ( elapsed_time > SCREENSAVER_WAIT_TIME) {
             safe_printf("Turning on screensaver\n");
             turn_on_screensaver();
         } 
