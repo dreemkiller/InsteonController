@@ -58,8 +58,7 @@
 #define I2C_MASTER_SLAVE_ADDR_7BIT 0x7EU
 #define I2C_BAUDRATE 100000U
 
-#define MAX_DOUBLECLICK_DELAY 0.2f
-
+#define LONG_TOUCH_THRESHOLD 0.25f
 
  static void BOARD_InitPWM(void)
 {
@@ -216,13 +215,6 @@ int main(void)
     event_info.click_timer.start();
     event_info.last_event_time = event_info.click_timer.read();
 
-    Thread single_click_detect_thread;
-    err = single_click_detect_thread.start(&single_click_detect_loop);
-    if (err) {
-        safe_printf("single_click_detect thread failed\n");
-        assert(0);
-    }
-
     Thread screensaver_thread;
     err = screensaver_thread.start(&screen_saver_loop);
     if (err) {
@@ -231,42 +223,50 @@ int main(void)
     }
     screensaver_on = false;
 
+    Timer touch_timer;
+    bool timer_active = false; // in an ideal world, Timer would contain this value
     for (;;)
     {
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
         {
             if (touch_event == kTouch_Down) {
-                safe_printf("X:%d Y:%d\n", cursorPosX, cursorPosY);
                 if (screensaver_on) {
+                    safe_printf("Turning off screensaver\n");
                     turn_off_screensaver();
-                    continue;
+                } else { // else because we don't want touches when screen saver is on to have UI effects
+                    timer_active = true;
+                    touch_timer.start();
                 }
-                event_info.click_mutex.lock();
-                event_info.x_pos = cursorPosX;
-                event_info.y_pos = cursorPosY;
-                float current_time = event_info.click_timer.read();
-                if (event_info.active && (current_time - event_info.last_event_time) < MAX_DOUBLECLICK_DELAY) {
-                    safe_printf("Second click detected\n");
-                    event_info.active = false;
-                    // We've got a doubleclick event
-                    for (size_t i = 0; i < num_floorplan_regions; i++) {
-                        const char *regionName = checkRegion(floorplan_regions[i], cursorPosX, cursorPosY);
-                        if ( regionName ) {
-                            safe_printf("Double Click In %s\n", regionName);       
-                            InsteonHttpThread.signal_set(floorplan_regions[i].off_signal);
-                            break;
+            } else if (touch_event == kTouch_Up) {
+                if (timer_active) {
+                    safe_printf("X:%d Y:%d\n", cursorPosX, cursorPosY);
+                    float touch_time = touch_timer.read();
+                    touch_timer.stop();
+                    touch_timer.reset();
+                    timer_active = false;
+                    safe_printf("touch_time:%f\n", touch_time);
+                    if (touch_time < LONG_TOUCH_THRESHOLD) {
+                        // short touch - turn on
+                        for (size_t i = 0; i < num_floorplan_regions; i++) {
+                            const char *regionName = checkRegion(floorplan_regions[i], cursorPosX, cursorPosY);
+                            if ( regionName ) {
+                                safe_printf("Short Touch In %s\n", regionName);
+                                InsteonHttpThread.signal_set(floorplan_regions[i].on_signal);
+                                break;
+                            }
+                        }
+                    } else {
+                        // long touch - turn off
+                        for (size_t i = 0; i < num_floorplan_regions; i++) {
+                            const char *regionName = checkRegion(floorplan_regions[i], cursorPosX, cursorPosY);
+                            if ( regionName ) {
+                                safe_printf("Long Touch In %s\n", regionName);       
+                                InsteonHttpThread.signal_set(floorplan_regions[i].off_signal);
+                                break;
+                            }
                         }
                     }
-                } else {
-                    safe_printf("First click detected\n");
-                    event_info.click_timer.stop();
-                    event_info.click_timer.start();
-                    event_info.last_event_time = event_info.click_timer.read();
-                    event_info.active = true;
-                    event_info.x_pos = cursorPosX;
-                    event_info.y_pos = cursorPosY;
-                }
-                event_info.click_mutex.unlock();
+                }   
             }
         }
         else
@@ -274,26 +274,6 @@ int main(void)
             safe_printf("error reading touch controller\r\n");
         }
         
-    }
-}
-
-void single_click_detect_loop() {
-    while(1) {
-        float current_time = event_info.click_timer.read();
-        if (event_info.active && ((current_time - event_info.last_event_time) > MAX_DOUBLECLICK_DELAY)) {
-            event_info.click_mutex.lock();
-            event_info.active = false;
-            event_info.last_event_time = current_time;
-            for (size_t i = 0; i < num_floorplan_regions; i++) {
-                const char *regionName = checkRegion(floorplan_regions[i], event_info.x_pos, event_info.y_pos);
-                if ( regionName ) {
-                    safe_printf("Single Click In %s\n", regionName);
-                    InsteonHttpThread.signal_set(floorplan_regions[i].on_signal);
-                    break;
-                }
-            }
-            event_info.click_mutex.unlock();
-        }
     }
 }
 
