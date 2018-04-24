@@ -22,6 +22,8 @@
 #define APP_PIXEL_PER_BYTE 8
 
 extern const char _binary_Floorplan_bmp_start;
+extern const char _binary_Floorplan_bmp_end;
+extern const int _binary_Floorplan_bmp_size;
 
 /* Frame end flag. */
 static volatile bool s_frameEndFlag;
@@ -51,6 +53,15 @@ void APP_LCD_IRQHandler(void)
 
 status_t APP_LCDC_Init(void)
 {
+    uint8_t *floorplan_copy = NULL;
+
+    uint32_t bmp_size = (uint32_t) (&_binary_Floorplan_bmp_end - &_binary_Floorplan_bmp_start);
+    floorplan_copy = (uint8_t *) malloc(bmp_size);
+    if (floorplan_copy == NULL) {
+        safe_printf("Failed to allocate floor plan copy\n");
+        assert(0);
+    }
+    memcpy(floorplan_copy, ((uint8_t *)&_binary_Floorplan_bmp_start), bmp_size);
     /* Initialize the display. */
     lcdc_config_t lcdConfig;
 
@@ -66,9 +77,13 @@ status_t APP_LCDC_Init(void)
     lcdConfig.vfp = LCD_VFP;
     lcdConfig.vbp = LCD_VBP;
     lcdConfig.polarityFlags = LCD_POL_FLAGS;
-    //lcdConfig.upperPanelAddr = (uint32_t)s_frameBufs;
-    safe_printf("_binary_Floorplan_bmp_start:%x\n", &_binary_Floorplan_bmp_start + 4);
-    lcdConfig.upperPanelAddr = (uint32_t)(&_binary_Floorplan_bmp_start + 4);
+    safe_printf("First 8 bytes of buffer:");
+    for (int i = 0; i < 8; i++) {
+        safe_printf("0x%x ", floorplan_copy[i]);
+    }
+    safe_printf("\n");
+    //lcdConfig.upperPanelAddr = (uint32_t)(&_binary_Floorplan_bmp_start + 4);
+    lcdConfig.upperPanelAddr = (uint32_t)(floorplan_copy);
     lcdConfig.bpp = kLCDC_1BPP;
     lcdConfig.display = kLCDC_DisplayTFT;
     lcdConfig.swapRedBlue = true;
