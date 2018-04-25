@@ -6,6 +6,7 @@
 
 #include "insteon_client.h"
 #include "floorplan_regions.h"
+#include "lcd.h"
 
 extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
@@ -76,8 +77,10 @@ void insteon_loop() {
             RectangularRegion this_region = floorplan_regions[region_num];
             if (signals & this_region.on_signal) {
                 insteon(this_region.arguments.id, this_region.arguments.type, INSTEON_ON);
+                light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
             } else if (signals & this_region.off_signal) {
                 insteon(this_region.arguments.id, this_region.arguments.type, INSTEON_OFF);
+                unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
             }
         }
     }
