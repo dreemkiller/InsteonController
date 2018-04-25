@@ -67,6 +67,12 @@ uint32_t get_pixel_byte(uint32_t x, uint32_t y) {
 uint32_t get_pixel_shift(uint32_t x, uint32_t y) {
     uint32_t y_dim = 480;
     uint32_t pixel_shift = (x * y_dim + y) % PIXELS_PER_BYTE;
+    // The following is to adjust for little-endianness within the byte
+    if (pixel_shift < 4) {
+        pixel_shift += 4;
+    } else {
+        pixel_shift -= 4;
+    }
     return 2 * pixel_shift;
 }
 
@@ -75,7 +81,6 @@ void light_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_max
         for (uint32_t y = y_min; y < y_max; y++) {
             uint32_t pixel_byte = get_pixel_byte(x, y);
             uint32_t pixel_shift = get_pixel_shift(x, y);
-            //uint32_t pixel_shift = get_pixel_shift(x, y);
             floorplan_copy[pixel_byte] |= (0x2 << pixel_shift);
         }
     }
@@ -85,8 +90,8 @@ void unlight_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_m
     for (uint32_t x = x_min; x < x_max; x++) {
         for (uint32_t y = y_min; y < y_max; y++) {
             uint32_t pixel_byte = get_pixel_byte(x, y);
-            //uint32_t pixel_shift = get_pixel_shift(x, y);
-            floorplan_copy[pixel_byte] &= ~0xaa;
+            uint32_t pixel_shift = get_pixel_shift(x, y);
+            floorplan_copy[pixel_byte] &= ~(0x2 << pixel_shift);
         }
     }    
 }
@@ -105,10 +110,15 @@ int convert_bitmap(uint8_t *source, uint32_t source_size, uint8_t *dest, uint32_
             memset(dest, 0, dest_size);
             for (uint32_t i = 0; i < source_size; i++) {
                 uint8_t source_byte = source[i];
-                uint8_t doubled_byte = (source_byte & 0x1) | ((source_byte & 0x2) << 1) | ((source_byte & 0x4) << 2) | ((source_byte & 0x8) << 3);
-                dest[i * 2] = doubled_byte;
-                doubled_byte = ((source_byte & 0x10) >> 4) | ((source_byte & 0x20) >> 3) | ((source_byte & 0x40) >> 2) | ((source_byte & 0x80) >> 1);
-                dest[i * 2 + 1] = doubled_byte;
+                uint16_t word = 0;
+                for (uint32_t pixel = 0; pixel < 8; pixel++) {
+                    uint8_t pixel_value = (source_byte >> pixel) & 0x01;
+                    
+                    word |= (pixel_value << (2 * pixel));
+                }
+                // The following two assignments are "out of order" because if little-endianness within the byte
+                dest[i * 2 + 1] = (uint8_t) (word & 0xff);
+                dest[i * 2] = (uint8_t) ((word >> 8) & 0xff);
             }
             break;
         default:
