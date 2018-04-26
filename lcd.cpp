@@ -77,9 +77,10 @@ uint32_t get_pixel_shift(uint32_t x, uint32_t y) {
     return pixel_shift;
 }
 
+#define STIPPLE_SKIP 3
 void light_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_max) {
-    for (uint32_t x = x_min; x < x_max; x++) {
-        for (uint32_t y = y_min; y < y_max; y++) {
+    for (uint32_t x = x_min; x < x_max; x += STIPPLE_SKIP) {
+        for (uint32_t y = y_min; y < y_max; y += STIPPLE_SKIP) {
             uint32_t pixel_byte = get_pixel_byte(x, y);
             uint32_t pixel_shift = get_pixel_shift(x, y);
             floorplan_copy[pixel_byte] |= (0x2 << pixel_shift);
@@ -88,8 +89,8 @@ void light_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_max
 }
 
 void unlight_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_max) {
-    for (uint32_t x = x_min; x < x_max; x++) {
-        for (uint32_t y = y_min; y < y_max; y++) {
+    for (uint32_t x = x_min; x < x_max; x += STIPPLE_SKIP) {
+        for (uint32_t y = y_min; y < y_max; y += STIPPLE_SKIP) {
             uint32_t pixel_byte = get_pixel_byte(x, y);
             uint32_t pixel_shift = get_pixel_shift(x, y);
             floorplan_copy[pixel_byte] &= ~(0x2 << pixel_shift);
