@@ -67,13 +67,14 @@ uint32_t get_pixel_byte(uint32_t x, uint32_t y) {
 uint32_t get_pixel_shift(uint32_t x, uint32_t y) {
     uint32_t y_dim = 480;
     uint32_t pixel_shift = (x * y_dim + y) % PIXELS_PER_BYTE;
+    pixel_shift *= 2;
     // The following is to adjust for little-endianness within the byte
     if (pixel_shift < 4) {
         pixel_shift += 4;
     } else {
         pixel_shift -= 4;
     }
-    return 2 * pixel_shift;
+    return pixel_shift;
 }
 
 void light_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_max) {
@@ -157,11 +158,6 @@ status_t APP_LCDC_Init(void)
     lcdConfig.vfp = LCD_VFP;
     lcdConfig.vbp = LCD_VBP;
     lcdConfig.polarityFlags = LCD_POL_FLAGS;
-    safe_printf("First 8 bytes of buffer:");
-    for (int i = 0; i < 8; i++) {
-        safe_printf("0x%x ", floorplan_copy[i]);
-    }
-    safe_printf("\n");
     //lcdConfig.upperPanelAddr = (uint32_t)(&_binary_Floorplan_bmp_start + 4);
     lcdConfig.upperPanelAddr = (uint32_t)(floorplan_copy);
     lcdConfig.bpp = kLCDC_2BPP;
