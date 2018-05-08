@@ -13,9 +13,6 @@ extern uint32_t num_floorplan_regions;
 
 EthernetInterface net;
 
-#define INSTEON_IP "192.168.0.100"
-
-#define INSTEON_PORT 25105
 
 void insteon_setup() {
     safe_printf("insteon_setup\n");
@@ -26,8 +23,8 @@ void insteon_setup() {
     safe_printf("IP address is %s\n", ip ? ip: "No IP");    
 }
 
-void insteon(uint32_t id, IdType type, uint32_t command) {
-    safe_printf("insteon called\n");
+
+void insteon_control(uint32_t id, IdType type, uint32_t command) {
     TCPSocket socket;
     int open_result = socket.open(&net);
     if (open_result != 0) {
@@ -48,7 +45,6 @@ void insteon(uint32_t id, IdType type, uint32_t command) {
     } else {
         assert(0);
     }
-    safe_printf("sending:%s\n", sbuffer);   
     int scount = socket.send(sbuffer, strlen(sbuffer));
     if (scount == 0) {
         safe_printf("Failed to send\n");
@@ -56,8 +52,7 @@ void insteon(uint32_t id, IdType type, uint32_t command) {
 
     char rbuffer[1024];
     memset(rbuffer, 0, sizeof(rbuffer));
-    int rcount = socket.recv(rbuffer, sizeof(rbuffer));
-    safe_printf("received: %d [%.*s]\n", rcount, strstr(rbuffer, "\r\n")-rbuffer, rbuffer);
+    socket.recv(rbuffer, sizeof(rbuffer));
 
     int close_result = socket.close();
     if (close_result != 0) {
@@ -68,6 +63,12 @@ void insteon(uint32_t id, IdType type, uint32_t command) {
 
 void insteon_loop() {
     insteon_setup();
+    Thread light_status_thread;
+    int err = light_status_thread.start(&light_status_loop);
+    if (err != 0) {
+        safe_printf("Failed to start light status thread\n");
+        assert(0);
+    }
     safe_printf("insteon_setup complete\n");
     while(true) {
         safe_printf("Http Thread waiting\n");
@@ -76,10 +77,11 @@ void insteon_loop() {
         for (uint32_t region_num = 0; region_num < num_floorplan_regions; region_num++ ) {
             RectangularRegion this_region = floorplan_regions[region_num];
             if (signals & this_region.on_signal) {
-                insteon(this_region.arguments.id, this_region.arguments.type, INSTEON_ON);
+                insteon_control(this_region.arguments.id, this_region.arguments.type, INSTEON_ON);
                 light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
+                insteon_get_region_on(this_region.arguments.id, this_region.arguments.type);
             } else if (signals & this_region.off_signal) {
-                insteon(this_region.arguments.id, this_region.arguments.type, INSTEON_OFF);
+                insteon_control(this_region.arguments.id, this_region.arguments.type, INSTEON_OFF);
                 unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
             }
         }
