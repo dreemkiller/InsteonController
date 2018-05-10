@@ -79,7 +79,6 @@ void insteon_loop() {
             if (signals & this_region.on_signal) {
                 insteon_control(this_region.arguments.id, this_region.arguments.type, INSTEON_ON);
                 light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
-                insteon_get_region_on(this_region.arguments.id, this_region.arguments.type);
             } else if (signals & this_region.off_signal) {
                 insteon_control(this_region.arguments.id, this_region.arguments.type, INSTEON_OFF);
                 unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);

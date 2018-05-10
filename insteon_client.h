@@ -9,6 +9,14 @@ typedef enum {
 struct InsteonArguments {
     uint32_t id;
     IdType type;
+    uint32_t reference_device; // I can't query group status,
+                               // so instead I need to query
+                               // the status of a "reference"
+                               // device in the group
+                               // This is not completely reliable
+                               // (a device in the group may have
+                               // a different status than the rest
+                               // of the devices)
 };
 
 #define INSTEON_ON 0x11 

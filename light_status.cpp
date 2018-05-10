@@ -120,128 +120,23 @@ static int get_device_status(uint32_t id) {
     }
 }
 
-/* Get the on/off status of an Insteon group
- * The following sequence is derived from page 8 under "Group Commands" of the pdf at
- * http://cache.insteon.com/developer/2242-222dev-062013-en.pdf
- * In case the URL gets stale, the document title is "Insteon Hub: Developer's Guide"
- */
-/* TODO: Look into using /sx.xml?ID=SD_CMD as described in https://blog.automategreen.com/post/under-the-insteon-hub-hood/
- */
-/* TODO: or use http://X.X.X.X:25105/b.xml?01=1=F, from url http://forum.smarthome.com/topic.asp?TOPIC_ID=13762
- */
-static int get_group_status(uint32_t id) {
-    safe_printf("get_group_status called\n");
-    TCPSocket socket;
-
-    // First, clear the hub's buffer
-    int open_result = socket.open(&net);
-    if (open_result != 0) {
-        safe_printf("socket open failed:%d\n", open_result);
-        return -1;
-    }
-    int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("socket connect failed:%d\n", connect_result);
-        socket.close();
-        return -1;
-    }
-
-    char sbuffer[256];
-    sprintf(sbuffer, "GET /1?XB=M=1 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", INSTEON_IP, INSTEON_PORT);
-    
-    int scount = socket.send(sbuffer, strlen(sbuffer));
-    if (scount == 0) {
-        safe_printf("Failed to send\n");
-    }
-    int close_result = socket.close();
-    if (close_result != 0) {
-        safe_printf("Socket close failed:%d\n");
-        return -1;
-    }
-
-    // Next, tell the hub what we want
-    open_result = socket.open(&net);
-    if (open_result != 0) {
-        safe_printf("socket open failed:%d\n", open_result);
-        return -1;
-    }
-    connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("socket connect failed:%d\n", connect_result);
-        socket.close();
-        return -1;
-    }
-
-    sprintf(sbuffer, "GET /0?%02X%02lX=I0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", 0x19, id, INSTEON_IP, INSTEON_PORT);
-    
-    scount = socket.send(sbuffer, strlen(sbuffer));
-    if (scount == 0) {
-        safe_printf("Failed to send\n");
-    }
-
-    char rbuffer[1024];
-    memset(rbuffer, 0, sizeof(rbuffer));
-    socket.recv(rbuffer, sizeof(rbuffer));
-
-    close_result = socket.close();
-    if (close_result != 0) {
-        safe_printf("Socket close failed:%d\n");
-        return -1;
-    }
-
-    open_result = socket.open(&net);
-    if (open_result != 0) {
-        safe_printf("Socket open failed:%d\n", open_result);
-        return -1;
-    }
-
-    // next, get the hub's buffer
-    connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("Socket connect failed:%d\n", connect_result);
-        return -1;
-    }
-
-    // response won't wait more than 3s
-    wait(INSTEON_STATUS_DELAY);
-
-    sprintf(sbuffer, "GET /buffstatus.xml HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", INSTEON_IP, INSTEON_PORT);
-
-    scount = socket.send(sbuffer, strlen(sbuffer));
-    if (scount == 0) {
-        safe_printf("Failed to send get for buffstatus.xml");
-    }
-    memset(rbuffer, 0, sizeof(rbuffer));
-    socket.recv(rbuffer, sizeof(rbuffer));
-
-    close_result = socket.close();
-    if (close_result != 0) {
-        safe_printf("close failed:%d\n", close_result);
-        return -1;
-    }
-    // Now, I could implement an entire XML parser (kinda hard, kinda memory intensive), or I could just munge the string. Which do you think
-    // I'll do?
-    char *rbuffer_ptr = &rbuffer[119]; // 14 bytes skips past some header stuff that's uninteresting to me
-    safe_printf("rbuffer_ptr:%s\n", rbuffer_ptr);
-
-    return -1;
-}
-int insteon_get_region_on(uint32_t id, IdType type) {
+int insteon_get_region_on(uint32_t id, IdType type, uint32_t reference_device) {
     if (type == DEVICE_ID) {
         return get_device_status(id);
     } else {
-        return get_group_status(id);
+        return get_device_status(reference_device);
     }
     
 }
-
 
 void light_status_loop() {
     while(true) {
         safe_printf("Light status check triggered\n");
         for (uint32_t i = 0; i < num_floorplan_regions; i++) {
             RectangularRegion this_region = floorplan_regions[i];
-            int region_on_result = insteon_get_region_on(this_region.arguments.id, this_region.arguments.type);
+            int region_on_result = insteon_get_region_on(this_region.arguments.id,
+                                                         this_region.arguments.type,
+                                                         this_region.arguments.reference_device);
             if (region_on_result == 0) {
                 unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
             } else if (region_on_result == 1) {
