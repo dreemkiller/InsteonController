@@ -196,7 +196,13 @@ int main(void)
     if (status != kStatus_Success)
     {
         safe_printf("Touch panel init failed\n");
-        
+        // Make LED 1 flash fast forever as feedback for when the console is not connected
+        while(1) {
+            led1 = 1;
+            wait(0.05);
+            led1 = 0;
+            wait(0.05);
+        }
     }
     assert( status == kStatus_Success);
 

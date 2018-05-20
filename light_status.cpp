@@ -2,7 +2,7 @@
 
 #include "stdio_thread.h"
 #include "mbed.h"
-#include "EthernetInterface.h"
+#include "wizfi310-driver/WizFi310Interface.h"
 
 #include "insteon_client.h"
 #include "floorplan_regions.h"
@@ -11,7 +11,7 @@
 extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
 
-extern EthernetInterface net;
+extern WizFi310Interface net;
 
 /* Get the on/off status of an Insteon device
  * The following sequence is derived from page 10 under "Status Request Example:" of the pdf at

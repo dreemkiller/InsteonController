@@ -3,6 +3,7 @@
 #include "stdio_thread.h"
 #include "mbed.h"
 #include "EthernetInterface.h"
+#include "wizfi310-driver/WizFi310Interface.h"
 
 #include "insteon_client.h"
 #include "floorplan_regions.h"
@@ -10,16 +11,26 @@
 
 extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
+extern DigitalOut led2;
 
-EthernetInterface net;
+WizFi310Interface net(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX, true);
 
 
 void insteon_setup() {
     safe_printf("insteon_setup\n");
 
-    net.connect();
+    net.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2, 0);
 
     const char *ip = net.get_ip_address();
+    if (ip == NULL) {
+        safe_printf("Failed to connect to network. Not sure why\n");
+        while(1) {
+            led2 = 1;
+            wait(0.05);
+            led2 = 0;
+            wait(0.05);
+        }
+    }
     safe_printf("IP address is %s\n", ip ? ip: "No IP");    
 }
 
