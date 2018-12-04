@@ -37,7 +37,6 @@ static int get_device_status(uint32_t id) {
     snprintf(read_status_command, sizeof(read_status_command), "0262%06lX0F1900", id);
     char sbuffer[1024];
     sprintf(sbuffer, "GET /3?%s=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", read_status_command, INSTEON_IP, INSTEON_PORT);
-    
     int scount = socket.send(sbuffer, strlen(sbuffer));
     if (scount == 0) {
         safe_printf("Failed to send\n");
@@ -46,11 +45,10 @@ static int get_device_status(uint32_t id) {
     char rbuffer[1024];
     memset(rbuffer, 0, sizeof(rbuffer));
     socket.recv(rbuffer, sizeof(rbuffer));
-
     int close_result = socket.close();
     if (close_result != 0) {
-        safe_printf("Socket close failed:%d\n");
-        return -1;
+        //safe_printf("Socket close failed:%d\n");
+        //return -1;
     }
 
     open_result = socket.open(&net);
@@ -79,8 +77,8 @@ static int get_device_status(uint32_t id) {
 
     close_result = socket.close();
     if (close_result != 0) {
-        safe_printf("close failed:%d\n", close_result);
-        return -1;
+        //safe_printf("close failed:%d\n", close_result);
+        //return -1;
     }
 
     // Now, I could implement an entire XML parser (kinda hard, kinda memory intensive), or I could just munge the string. Which do you think
@@ -142,7 +140,7 @@ void light_status_loop() {
             } else if (region_on_result == 1) {
                 light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
             } else {
-                safe_printf("Failed to get region status:%d\n", region_on_result);
+                safe_printf("Failed to get region(%s) status:%d\n", this_region.Name, region_on_result);
             }
         }
         wait(LIGHT_STATUS_INTERVAL); // TODO: Also wait for screen saver to be off

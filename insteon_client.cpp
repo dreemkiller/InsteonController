@@ -13,7 +13,7 @@ extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
 extern DigitalOut led2;
 
-WizFi310Interface net(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX, true);
+WizFi310Interface net(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX, false);
 
 
 void insteon_setup() {
@@ -67,8 +67,8 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
 
     int close_result = socket.close();
     if (close_result != 0) {
-        safe_printf("close failed:%d\n", close_result);
-        return;
+        //safe_printf("close failed:%d\n", close_result);
+        //return;
     }
 }
 
