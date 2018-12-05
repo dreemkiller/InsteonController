@@ -60,6 +60,7 @@
 
 #define LONG_TOUCH_THRESHOLD 0.25f
 
+
  static void BOARD_InitPWM(void)
 {
     sctimer_config_t config;
@@ -130,11 +131,13 @@ Thread InsteonHttpThread;
 extern bool screensaver_on;
 
 bool screensaver_on;
-#define SCREENSAVER_WAIT_TIME 120.0f
+
 extern DigitalOut backlight;
 void screensaver_loop();
 void turn_off_screensaver();
 Timer screensaver_timer;
+
+Mutex network_mutex;
 
 int main(void)
 {
@@ -196,7 +199,13 @@ int main(void)
     if (status != kStatus_Success)
     {
         safe_printf("Touch panel init failed\n");
-        
+        // Make LED 1 flash fast forever as feedback for when the console is not connected
+        while(1) {
+            led1 = 1;
+            wait(0.05);
+            led1 = 0;
+            wait(0.05);
+        }
     }
     assert( status == kStatus_Success);
 
@@ -207,15 +216,19 @@ int main(void)
         safe_printf("Http Setup thread failed\n");
         assert(0);
     }
+    safe_printf("insteon_loop started\n");
 
     Thread screensaver_thread;
     screensaver_timer.start();
+#if 1
     err = screensaver_thread.start(&screensaver_loop);
     if (err) {
         safe_printf("screen saver thread failed to start\n");
         assert(0);
     }
     screensaver_on = false;
+    safe_printf("screensaver_loop started\n");
+#endif
 
     Timer touch_timer;
     bool timer_active = false; // in an ideal world, Timer would contain this value
@@ -287,13 +300,16 @@ void turn_off_screensaver() {
     LCDC_PowerUp(APP_LCD);
 }
 
+
 void screensaver_loop() {
     while(1) {
-        wait(SCREENSAVER_WAIT_TIME);
+        wait(MBED_CONF_APP_SCREENSAVER_WAIT_TIME);
         float elapsed_time = screensaver_timer.read();
-        if ( elapsed_time > SCREENSAVER_WAIT_TIME) {
+        if ( !screensaver_on && (elapsed_time > MBED_CONF_APP_SCREENSAVER_WAIT_TIME) ) {
             safe_printf("Turning on screensaver\n");
             turn_on_screensaver();
-        } 
+        }
+
+        check_network();
     }
 }
