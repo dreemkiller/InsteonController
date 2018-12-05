@@ -98,20 +98,3 @@ void insteon_loop() {
         }
     }
 }
-
-void check_network() {
-    TCPSocket socket;
-    network_mutex.lock();
-    int open_result = socket.open(&net);
-    if (open_result != 0) {
-        safe_printf("socket open failed:%d\n", open_result);
-        return;
-    }
-    int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("Network check socket connect failed:%d\n", connect_result);
-        return;
-    }
-    socket.close();
-    network_mutex.unlock();
-}
