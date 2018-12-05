@@ -1,0 +1,35 @@
+{
+    "config": {
+       "wifi-ssid": {
+            "help": "WiFi SSID",
+            "value": "\"Your Wifi Name goes here""
+        },
+        "wifi-password": {
+            "help": "WiFi Password",
+            "value": "\"Your Wifi Password goes here\""
+        },
+        "wifi-tx": {
+            "help": "TX pin for serial connection to external device",
+            "value": "D1"
+        },
+        "wifi-rx": {
+            "help": "RX pin for serial connection to external device",
+            "value": "D0"
+        },
+        "screensaver-wait-time": {
+            "help": "Wait time (in seconds) for the screen saver check",
+            "value": "120.0f"
+        },
+        "lightstatus_check_interval": {
+            "help": "Wait time (in seconds) between checks for light status",
+            "value": "30.0f"
+        }
+    },
+    "target_overrides": {
+        "*": {
+            "target.features_add": ["NANOSTACK", "LOWPAN_ROUTER", "COMMON_PAL"],
+            "mbed-mesh-api.6lowpan-nd-channel-page": 0,
+            "mbed-mesh-api.6lowpan-nd-channel": 12
+        }
+    }
+}
