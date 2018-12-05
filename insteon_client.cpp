@@ -12,6 +12,7 @@
 extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
 extern DigitalOut led2;
+extern Mutex network_mutex;
 
 WizFi310Interface net(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX, false);
 
@@ -37,6 +38,7 @@ void insteon_setup() {
 
 void insteon_control(uint32_t id, IdType type, uint32_t command) {
     TCPSocket socket;
+    network_mutex.lock();
     int open_result = socket.open(&net);
     if (open_result != 0) {
         safe_printf("socket open failed:%d\n", open_result);
@@ -46,6 +48,7 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
     if (connect_result != 0) {
         safe_printf("socket connect failed:%d\n", connect_result);
         socket.close();
+        network_mutex.unlock();
         return;
     }
     char sbuffer [1024];
@@ -59,27 +62,25 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
     int scount = socket.send(sbuffer, strlen(sbuffer));
     if (scount == 0) {
         safe_printf("Failed to send\n");
+        return;
     }
-
     char rbuffer[1024];
     memset(rbuffer, 0, sizeof(rbuffer));
     socket.recv(rbuffer, sizeof(rbuffer));
-
-    int close_result = socket.close();
-    if (close_result != 0) {
-        //safe_printf("close failed:%d\n", close_result);
-        //return;
-    }
+    socket.close();
+    network_mutex.unlock();
 }
 
 void insteon_loop() {
     insteon_setup();
+#if 1
     Thread light_status_thread;
     int err = light_status_thread.start(&light_status_loop);
     if (err != 0) {
         safe_printf("Failed to start light status thread\n");
         assert(0);
     }
+#endif
     safe_printf("insteon_setup complete\n");
     while(true) {
         safe_printf("Http Thread waiting\n");
@@ -96,4 +97,21 @@ void insteon_loop() {
             }
         }
     }
+}
+
+void check_network() {
+    TCPSocket socket;
+    network_mutex.lock();
+    int open_result = socket.open(&net);
+    if (open_result != 0) {
+        safe_printf("socket open failed:%d\n", open_result);
+        return;
+    }
+    int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
+    if (connect_result != 0) {
+        safe_printf("Network check socket connect failed:%d\n", connect_result);
+        return;
+    }
+    socket.close();
+    network_mutex.unlock();
 }
