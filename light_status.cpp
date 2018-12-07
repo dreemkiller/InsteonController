@@ -29,7 +29,7 @@ static int get_device_status(uint32_t id) {
         safe_printf("socket open failed:%d\n", open_result);
         return -1;
     }
-    int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
+    int connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     if (connect_result != 0) {
         safe_printf("socket connect failed:%d\n", connect_result);
         socket.close();
@@ -38,7 +38,7 @@ static int get_device_status(uint32_t id) {
     char read_status_command[17];
     snprintf(read_status_command, sizeof(read_status_command), "0262%06lX0F1900", id);
     char sbuffer[1024];
-    sprintf(sbuffer, "GET /3?%s=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", read_status_command, INSTEON_IP, INSTEON_PORT);
+    sprintf(sbuffer, "GET /3?%s=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", read_status_command, MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     int scount = socket.send(sbuffer, strlen(sbuffer));
     if (scount == 0) {
         safe_printf("Failed to send\n");
@@ -61,7 +61,7 @@ static int get_device_status(uint32_t id) {
         return -1;
     }
 
-    connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
+    connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     if (connect_result != 0) {
         safe_printf("Socket connect failed:%d\n", connect_result);
         return -1;
@@ -70,7 +70,7 @@ static int get_device_status(uint32_t id) {
     // wait for the response to be ready
     wait(INSTEON_STATUS_DELAY);
 
-    sprintf(sbuffer, "GET /buffstatus.xml HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", INSTEON_IP, INSTEON_PORT);
+    sprintf(sbuffer, "GET /buffstatus.xml HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
 
     scount = socket.send(sbuffer, strlen(sbuffer));
     if (scount == 0) {

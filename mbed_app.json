@@ -23,6 +23,14 @@
         "lightstatus_check_interval": {
             "help": "Wait time (in seconds) between checks for light status",
             "value": "30.0f"
+        },
+        "insteon-ip": {
+            "help": "IP address of the insteon hub",
+            "value": "\"192.168.0.100\""
+        },
+        "insteon-port": {
+            "help": "Network port of the API on the insteon hub",
+            "value": "25105"
         }
     },
     "target_overrides": {

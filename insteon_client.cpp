@@ -44,7 +44,7 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
         safe_printf("socket open failed:%d\n", open_result);
         return;
     }
-    int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
+    int connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     if (connect_result != 0) {
         safe_printf("socket connect failed:%d\n", connect_result);
         socket.close();
@@ -53,9 +53,9 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
     }
     char sbuffer [1024];
     if (type == DEVICE_ID) {
-        sprintf(sbuffer, "GET /3?0262%06lx0F%02lxFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", id, command, INSTEON_IP, INSTEON_PORT);
+        sprintf(sbuffer, "GET /3?0262%06lx0F%02lxFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", id, command, MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     } else if (type == GROUP_ID) {
-        sprintf(sbuffer, "GET /0?%lx%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, INSTEON_IP, INSTEON_PORT);
+        sprintf(sbuffer, "GET /0?%lx%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     } else {
         assert(0);
     }
