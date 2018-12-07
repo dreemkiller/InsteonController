@@ -17,8 +17,8 @@ extern Mutex network_mutex;
 WizFi310Interface net(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX, false);
 
 
-void insteon_setup() {
-    safe_printf("insteon_setup\n");
+void network_setup() {
+    safe_printf("network_setup\n");
 
     net.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2, 0);
 
@@ -72,7 +72,6 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
 }
 
 void insteon_loop() {
-    insteon_setup();
 #if 1
     Thread light_status_thread;
     int err = light_status_thread.start(&light_status_loop);

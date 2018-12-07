@@ -204,6 +204,7 @@ int main(void)
     assert( status == kStatus_Success);
 
     safe_printf("Ready to go! joe\n");
+    network_setup();
 
     osStatus err = InsteonHttpThread.start(&insteon_loop);
     if (err) {
