@@ -29,11 +29,17 @@ static int get_device_status(uint32_t id) {
         safe_printf("socket open failed:%d\n", open_result);
         return -1;
     }
-    int connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("socket connect failed:%d\n", connect_result);
-        socket.close();
-        return -1;
+    int connect_result = -1;
+    while (connect_result) {
+        connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
+        if (connect_result != 0) {
+            safe_printf("socket connect failed:%d\n", connect_result);
+            socket.close();
+            while (network_setup()) {
+                safe_printf("Failed to set up network. Will try again in a bit\n");
+                wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+            }
+        }
     }
     char read_status_command[17];
     snprintf(read_status_command, sizeof(read_status_command), "0262%06lX0F1900", id);
@@ -61,10 +67,17 @@ static int get_device_status(uint32_t id) {
         return -1;
     }
 
-    connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("Socket connect failed:%d\n", connect_result);
-        return -1;
+    connect_result = -1;
+    while (connect_result) {
+        connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
+        if (connect_result != 0) {
+            safe_printf("socket connect failed:%d\n", connect_result);
+            socket.close();
+            while (network_setup()) {
+                safe_printf("Failed to set up network. Will try again in a bit\n");
+                wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+            }
+        }
     }
 
     // wait for the response to be ready
@@ -97,8 +110,8 @@ static int get_device_status(uint32_t id) {
     }
     rbuffer_ptr += 2;
     if (strncmp(rbuffer_ptr, "0250", 4)) { // From PLM Insteon Received
-        safe_printf("\"From PLM Insteon Received\" not received\n");
-        return -1;
+        safe_printf("\"From PLM Insteon Received\" not received, instead %c%c%c%c\n", rbuffer_ptr[0], rbuffer_ptr[1], rbuffer_ptr[2], rbuffer_ptr[3]);
+        //return -1;
     }
     rbuffer_ptr += 4;
     char device_id_str[7];

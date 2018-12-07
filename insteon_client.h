@@ -30,7 +30,7 @@ int insteon_get_region_on(uint32_t id, IdType type);
 
 void light_status_loop();
 
-void network_setup();
+int network_setup();
 
 void insteon_loop();
 

@@ -204,7 +204,10 @@ int main(void)
     assert( status == kStatus_Success);
 
     safe_printf("Ready to go! joe\n");
-    network_setup();
+    while (network_setup()) {
+        safe_printf("Failed to set up network. Will try again in a bit\n");
+        wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+    }
 
     osStatus err = InsteonHttpThread.start(&insteon_loop);
     if (err) {

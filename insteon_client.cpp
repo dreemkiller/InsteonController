@@ -17,7 +17,7 @@ extern Mutex network_mutex;
 WizFi310Interface net(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX, false);
 
 
-void network_setup() {
+int network_setup() {
     safe_printf("network_setup\n");
 
     net.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2, 0);
@@ -32,7 +32,12 @@ void network_setup() {
             wait(0.05);
         }
     }
-    safe_printf("IP address is %s\n", ip ? ip: "No IP");    
+    safe_printf("IP address is %s\n", ip ? ip: "No IP");
+    if (ip == NULL) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 
@@ -44,12 +49,17 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
         safe_printf("socket open failed:%d\n", open_result);
         return;
     }
-    int connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("socket connect failed:%d\n", connect_result);
-        socket.close();
-        network_mutex.unlock();
-        return;
+    int connect_result = -1;
+    while (connect_result) {
+        connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
+        if (connect_result != 0) {
+            safe_printf("socket connect failed:%d\n", connect_result);
+            socket.close();
+            while (network_setup()) {
+                safe_printf("Failed to set up network. Will try again in a bit\n");
+                wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+            }
+        }
     }
     char sbuffer [1024];
     if (type == DEVICE_ID) {
