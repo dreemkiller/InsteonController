@@ -8,6 +8,7 @@ typedef struct RectangularRegion {
     uint32_t YMin;
     uint32_t YMax;
     const char *Name;
+    uint32_t floor;
     int32_t on_signal;
     int32_t off_signal;
     struct InsteonArguments arguments;

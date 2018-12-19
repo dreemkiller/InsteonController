@@ -61,6 +61,7 @@
 
 #define LONG_TOUCH_THRESHOLD 0.25f
 
+extern uint32_t current_floor;
 
  static void BOARD_InitPWM(void)
 {
@@ -219,7 +220,7 @@ int main(void)
     Thread screensaver_thread;
     screensaver_timer.start();
 
-    err = screensaver_thread.start(&screensaver_loop);
+    osStatus err = screensaver_thread.start(&screensaver_loop);
     if (err) {
         safe_printf("screen saver thread failed to start\n");
         assert(0);
@@ -253,22 +254,35 @@ int main(void)
                     safe_printf("touch_time:%f\n", touch_time);
                     if (touch_time < LONG_TOUCH_THRESHOLD) {
                         // short touch - turn on
-                        for (size_t i = 0; i < num_floorplan_regions; i++) {
-                            const char *regionName = checkRegion(floorplan_regions[i], cursorPosX, cursorPosY);
-                            if ( regionName ) {
-                                safe_printf("Short Touch In %s\n", regionName);
-                                InsteonHttpThread.signal_set(floorplan_regions[i].on_signal);
-                                break;
+                        if (current_floor == 0 && cursorPosY > 440 ) {
+                            safe_printf("Detected switch to second floor\n");
+                            change_floors(1);
+                        } else if (current_floor == 1 && cursorPosY < 40) {
+                            safe_printf("Detected switch to first floor\n");
+                            change_floors(0);
+                            safe_printf("Floor change complete\n");
+                        } else {
+                            for (size_t i = 0; i < num_floorplan_regions; i++) {
+                                if (floorplan_regions[i].floor == current_floor) {
+                                    const char *regionName = checkRegion(floorplan_regions[i], cursorPosX, cursorPosY);
+                                    if ( regionName ) {
+                                        safe_printf("Short Touch In %s\n", regionName);
+                                        InsteonHttpThread.signal_set(floorplan_regions[i].on_signal);
+                                        break;
+                                    }
+                                }
                             }
                         }
                     } else {
                         // long touch - turn off
                         for (size_t i = 0; i < num_floorplan_regions; i++) {
-                            const char *regionName = checkRegion(floorplan_regions[i], cursorPosX, cursorPosY);
-                            if ( regionName ) {
-                                safe_printf("Long Touch In %s\n", regionName);       
-                                InsteonHttpThread.signal_set(floorplan_regions[i].off_signal);
-                                break;
+                            if (floorplan_regions[i].floor == current_floor) {
+                                const char *regionName = checkRegion(floorplan_regions[i], cursorPosX, cursorPosY);
+                                if ( regionName ) {
+                                    safe_printf("Long Touch In %s\n", regionName);       
+                                    InsteonHttpThread.signal_set(floorplan_regions[i].off_signal);
+                                    break;
+                                }
                             }
                         }
                     }
