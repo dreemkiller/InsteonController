@@ -110,7 +110,7 @@ void unlight_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_m
 }
 
 void change_floors(uint32_t new_floor) {
-    const uint32_t scroll_in_delay = 10;
+    const uint32_t scroll_in_delay = 3;
     const uint32_t display_columns = 480;
     const uint32_t display_rows = 272;
     const uint32_t scroll_in_columns = 5;
@@ -124,7 +124,9 @@ void change_floors(uint32_t new_floor) {
                 uint32_t dest_byte_offset = (row * display_columns) * bits_per_pixel / 8;
                 uint32_t source_byte_offset = ((row * display_columns) + (display_columns - scroll_in_columns) - i * scroll_in_columns) * bits_per_pixel / 8;
                 uint32_t row_size_in_bytes = (i + 1) * scroll_in_columns * bits_per_pixel / 8;
-                memcpy(&display_buffer[dest_byte_offset], &floorplan_first[source_byte_offset], row_size_in_bytes);
+                if (dest_byte_offset + row_size_in_bytes < display_buffer_size && (source_byte_offset + row_size_in_bytes < floorplan_first_size)) { // This is a dirty hack. I should be ashamed of myself
+                    memcpy(&display_buffer[dest_byte_offset], &floorplan_first[source_byte_offset], row_size_in_bytes);
+                }
             }
             wait_ms(scroll_in_delay);
         }
@@ -135,7 +137,9 @@ void change_floors(uint32_t new_floor) {
                 uint32_t dest_byte_offset = ((row * display_columns) + (display_columns - scroll_in_columns) - i * scroll_in_columns) * bits_per_pixel / 8;
                 uint32_t source_byte_offset = (row * display_columns) * bits_per_pixel / 8;
                 uint32_t row_size_in_bytes = (i + 1) * scroll_in_columns * bits_per_pixel / 8;
-                memcpy(&display_buffer[dest_byte_offset], &floorplan_second[source_byte_offset], row_size_in_bytes);
+                if (dest_byte_offset + row_size_in_bytes < display_buffer_size && (source_byte_offset + row_size_in_bytes < floorplan_second_size)) { // This is a dirty hack. I should be ashamed of myself
+                    memcpy(&display_buffer[dest_byte_offset], &floorplan_second[source_byte_offset], row_size_in_bytes);
+                }
             }
             wait_ms(scroll_in_delay);
         }
