@@ -110,7 +110,7 @@ void unlight_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_m
 }
 
 void change_floors(uint32_t new_floor) {
-    const uint32_t scroll_in_delay = 100;
+    const uint32_t scroll_in_delay = 10;
     const uint32_t display_columns = 480;
     const uint32_t display_rows = 272;
     const uint32_t scroll_in_columns = 5;
@@ -142,19 +142,13 @@ void change_floors(uint32_t new_floor) {
         for (uint32_t i = 0; i <= display_columns / scroll_in_columns; i++) {
             uint32_t dest_current_column;
             uint32_t source_current_column = 0;
-            for (dest_current_column = display_columns - scroll_in_columns - i * scroll_in_columns; dest_current_column < display_columns; dest_current_column++, source_current_column++ ) {
-                for (uint32_t current_row = 0; current_row < display_rows; current_row++) {
-                    uint32_t dest_pixel_offset = current_row * display_columns + dest_current_column;
-                    uint32_t dest_pixel_bit_offset = dest_pixel_offset * bits_per_pixel;
-                    uint32_t dest_pixel_byte_offset = dest_pixel_bit_offset / 8;
-
-                    uint32_t source_pixel_offset = current_row * display_columns + source_current_column;
-                    uint32_t source_pixel_bit_offset = source_pixel_offset * bits_per_pixel;
-                    uint32_t source_pixel_byte_offset = source_pixel_bit_offset / 8;
-                    display_buffer[dest_pixel_byte_offset] = floorplan_second[source_pixel_byte_offset];
-                }
+            for (uint32_t row = 0; row < display_rows; row++) {
+                uint32_t dest_byte_offset = ((row * display_columns) + (display_columns - scroll_in_columns) - i * scroll_in_columns) * bits_per_pixel / 8;
+                uint32_t source_byte_offset = (row * display_columns) * bits_per_pixel / 8;
+                uint32_t row_size_in_bytes = (i + 1) * scroll_in_columns * bits_per_pixel / 8;
+                memcpy(&display_buffer[dest_byte_offset], &floorplan_second[source_byte_offset], row_size_in_bytes);
             }
-            wait_us(scroll_in_delay);
+            wait_ms(scroll_in_delay);
         }
         memcpy(display_buffer, floorplan_second, floorplan_second_size);
     } else {
