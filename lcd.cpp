@@ -58,8 +58,14 @@ void APP_LCD_IRQHandler(void)
     __DSB();
 #endif
 }
+
+uint32_t current_floor = 0; // first floor. Arrays start at 0
+uint8_t *display_buffer = NULL;
+uint32_t display_buffer_size = 0;
 uint8_t *floorplan_first = NULL;
+uint32_t floorplan_first_size = 0;
 uint8_t *floorplan_second = NULL;
+uint32_t floorplan_second_size = 0;
 #define PIXELS_PER_BYTE 4
 
 uint32_t get_pixel_byte(uint32_t x, uint32_t y) {
@@ -103,6 +109,62 @@ void unlight_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_m
     }    
 }
 
+void change_floors(uint32_t new_floor) {
+    const uint32_t scroll_in_delay = 100;
+    const uint32_t display_columns = 480;
+    const uint32_t display_rows = 272;
+    const uint32_t scroll_in_columns = 5;
+    const uint32_t bits_per_pixel = 2;
+    if (new_floor == current_floor) {
+        return; // nothing to do
+    }
+    if (new_floor == 0) {
+        
+        for (uint32_t i = 0; i <= display_columns / scroll_in_columns; i++) {
+            uint32_t dest_current_column = 0;
+            uint32_t source_current_column = 0;
+            for (source_current_column = display_columns - scroll_in_columns - i * scroll_in_columns; source_current_column < display_columns; source_current_column++, dest_current_column++ ) {
+                for (uint32_t current_row = 0; current_row < display_rows; current_row++) {
+                    uint32_t dest_pixel_offset = current_row * display_columns + dest_current_column;
+                    uint32_t dest_pixel_bit_offset = dest_pixel_offset * bits_per_pixel;
+                    uint32_t dest_pixel_byte_offset = dest_pixel_bit_offset / 8;
+
+                    uint32_t source_pixel_offset = current_row * display_columns + source_current_column;
+                    uint32_t source_pixel_bit_offset = source_pixel_offset * bits_per_pixel;
+                    uint32_t source_pixel_byte_offset = source_pixel_bit_offset / 8;
+                    display_buffer[dest_pixel_byte_offset] = floorplan_first[source_pixel_byte_offset];
+                }
+            }
+            wait_us(scroll_in_delay);
+        }
+        memcpy(display_buffer, floorplan_first, floorplan_first_size);
+    } else if (new_floor == 1) {
+        for (uint32_t i = 0; i <= display_columns / scroll_in_columns; i++) {
+            uint32_t dest_current_column;
+            uint32_t source_current_column = 0;
+            for (dest_current_column = display_columns - scroll_in_columns - i * scroll_in_columns; dest_current_column < display_columns; dest_current_column++, source_current_column++ ) {
+                for (uint32_t current_row = 0; current_row < display_rows; current_row++) {
+                    uint32_t dest_pixel_offset = current_row * display_columns + dest_current_column;
+                    uint32_t dest_pixel_bit_offset = dest_pixel_offset * bits_per_pixel;
+                    uint32_t dest_pixel_byte_offset = dest_pixel_bit_offset / 8;
+
+                    uint32_t source_pixel_offset = current_row * display_columns + source_current_column;
+                    uint32_t source_pixel_bit_offset = source_pixel_offset * bits_per_pixel;
+                    uint32_t source_pixel_byte_offset = source_pixel_bit_offset / 8;
+                    display_buffer[dest_pixel_byte_offset] = floorplan_second[source_pixel_byte_offset];
+                }
+            }
+            wait_us(scroll_in_delay);
+        }
+        memcpy(display_buffer, floorplan_second, floorplan_second_size);
+    } else {
+        safe_printf("Unknown floor:%d\n", new_floor);
+        assert(0);
+    }
+    current_floor = new_floor;
+    return;
+}
+
 typedef enum {
     ONEBPP_TO_TWOBPP,
 } BitmapConversion;
@@ -137,31 +199,44 @@ int convert_bitmap(uint8_t *source, uint32_t source_size, uint8_t *dest, uint32_
 status_t APP_LCDC_Init(void)
 {
     uint32_t bmp_size = (uint32_t) (&_binary_Floorplan_first_bmp_end - &_binary_Floorplan_first_bmp_start);
-    floorplan_first = (uint8_t *) malloc(bmp_size * 2);
+
+    display_buffer_size = 272 * 480 * 2 / 8;
+    display_buffer = (uint8_t *) malloc( display_buffer_size );
+    if (display_buffer == NULL) {
+        safe_printf("Failed to allocate display buffer\n");
+        assert(0);
+    }
+    memset(display_buffer, 0, display_buffer_size);
+
+    floorplan_first_size = bmp_size * 2;
+    floorplan_first = (uint8_t *) malloc( floorplan_first_size );
     if (floorplan_first == NULL) {
         safe_printf("Failed to allocate floor plan copy\n");
         assert(0);
     }
 
-    int convert_result = convert_bitmap((uint8_t *)&_binary_Floorplan_first_bmp_start, bmp_size, floorplan_first, bmp_size * 2, ONEBPP_TO_TWOBPP);
+    int convert_result = convert_bitmap((uint8_t *)&_binary_Floorplan_first_bmp_start, bmp_size, floorplan_first, floorplan_first_size, ONEBPP_TO_TWOBPP);
     if (convert_result) {
         safe_printf("Failed to convert bitmap:%d\n", convert_result);
         assert(0);
     }
 
     uint32_t second_bmp_size = (uint32_t) (&_binary_Floorplan_second_bmp_end - &_binary_Floorplan_second_bmp_start);
-    floorplan_second = (uint8_t *) malloc(second_bmp_size * 2);
+    floorplan_second_size = second_bmp_size * 2;
+    floorplan_second = (uint8_t *) malloc( floorplan_second_size );
     if (floorplan_second == NULL) {
         safe_printf("Failed to allocate space for second floorplan\n");
         assert(0);
     }
 
-    convert_result = convert_bitmap((uint8_t *)&_binary_Floorplan_second_bmp_start, second_bmp_size, floorplan_second, second_bmp_size * 2, ONEBPP_TO_TWOBPP);
+    convert_result = convert_bitmap((uint8_t *)&_binary_Floorplan_second_bmp_start, second_bmp_size, floorplan_second, floorplan_second_size, ONEBPP_TO_TWOBPP);
     if (convert_result) {
         safe_printf("Failed to convert second floor bitmap:%d\n", convert_result);
         assert(0);
     }
 
+    current_floor = 0;
+    memcpy( display_buffer, floorplan_first, floorplan_first_size );
     /* Initialize the display. */
     lcdc_config_t lcdConfig;
 
@@ -177,8 +252,7 @@ status_t APP_LCDC_Init(void)
     lcdConfig.vfp = LCD_VFP;
     lcdConfig.vbp = LCD_VBP;
     lcdConfig.polarityFlags = LCD_POL_FLAGS;
-    //lcdConfig.upperPanelAddr = (uint32_t)(&_binary_Floorplan_bmp_start + 4);
-    lcdConfig.upperPanelAddr = (uint32_t)(floorplan_first);
+    lcdConfig.upperPanelAddr = (uint32_t)(display_buffer);
     lcdConfig.bpp = kLCDC_2BPP;
     lcdConfig.display = kLCDC_DisplayTFT;
     lcdConfig.swapRedBlue = true;
