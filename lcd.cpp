@@ -119,29 +119,18 @@ void change_floors(uint32_t new_floor) {
         return; // nothing to do
     }
     if (new_floor == 0) {
-        
         for (uint32_t i = 0; i <= display_columns / scroll_in_columns; i++) {
-            uint32_t dest_current_column = 0;
-            uint32_t source_current_column = 0;
-            for (source_current_column = display_columns - scroll_in_columns - i * scroll_in_columns; source_current_column < display_columns; source_current_column++, dest_current_column++ ) {
-                for (uint32_t current_row = 0; current_row < display_rows; current_row++) {
-                    uint32_t dest_pixel_offset = current_row * display_columns + dest_current_column;
-                    uint32_t dest_pixel_bit_offset = dest_pixel_offset * bits_per_pixel;
-                    uint32_t dest_pixel_byte_offset = dest_pixel_bit_offset / 8;
-
-                    uint32_t source_pixel_offset = current_row * display_columns + source_current_column;
-                    uint32_t source_pixel_bit_offset = source_pixel_offset * bits_per_pixel;
-                    uint32_t source_pixel_byte_offset = source_pixel_bit_offset / 8;
-                    display_buffer[dest_pixel_byte_offset] = floorplan_first[source_pixel_byte_offset];
-                }
+            for (uint32_t row = 0; row < display_rows; row++) {
+                uint32_t dest_byte_offset = (row * display_columns) * bits_per_pixel / 8;
+                uint32_t source_byte_offset = ((row * display_columns) + (display_columns - scroll_in_columns) - i * scroll_in_columns) * bits_per_pixel / 8;
+                uint32_t row_size_in_bytes = (i + 1) * scroll_in_columns * bits_per_pixel / 8;
+                memcpy(&display_buffer[dest_byte_offset], &floorplan_first[source_byte_offset], row_size_in_bytes);
             }
-            wait_us(scroll_in_delay);
+            wait_ms(scroll_in_delay);
         }
-        memcpy(display_buffer, floorplan_first, floorplan_first_size);
+        memcpy(display_buffer, floorplan_second, floorplan_second_size);
     } else if (new_floor == 1) {
         for (uint32_t i = 0; i <= display_columns / scroll_in_columns; i++) {
-            uint32_t dest_current_column;
-            uint32_t source_current_column = 0;
             for (uint32_t row = 0; row < display_rows; row++) {
                 uint32_t dest_byte_offset = ((row * display_columns) + (display_columns - scroll_in_columns) - i * scroll_in_columns) * bits_per_pixel / 8;
                 uint32_t source_byte_offset = (row * display_columns) * bits_per_pixel / 8;
