@@ -218,7 +218,7 @@ int main(void)
 
     Thread screensaver_thread;
     screensaver_timer.start();
-#if 1
+
     err = screensaver_thread.start(&screensaver_loop);
     if (err) {
         safe_printf("screen saver thread failed to start\n");
@@ -226,7 +226,6 @@ int main(void)
     }
     screensaver_on = false;
     safe_printf("screensaver_loop started\n");
-#endif
 
     Timer touch_timer;
     bool timer_active = false; // in an ideal world, Timer would contain this value
