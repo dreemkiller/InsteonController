@@ -94,7 +94,7 @@ void light_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_max
         for (uint32_t y = y_min; y < y_max; y += STIPPLE_SKIP) {
             uint32_t pixel_byte = get_pixel_byte(x, y);
             uint32_t pixel_shift = get_pixel_shift(x, y);
-            floorplan_first[pixel_byte] |= (0x2 << pixel_shift);
+            display_buffer[pixel_byte] |= (0x2 << pixel_shift);
         }
     }
 }
@@ -104,7 +104,7 @@ void unlight_region(uint32_t x_min, uint32_t y_min, uint32_t x_max, uint32_t y_m
         for (uint32_t y = y_min; y < y_max; y += STIPPLE_SKIP) {
             uint32_t pixel_byte = get_pixel_byte(x, y);
             uint32_t pixel_shift = get_pixel_shift(x, y);
-            floorplan_first[pixel_byte] &= ~(0x2 << pixel_shift);
+            display_buffer[pixel_byte] &= ~(0x2 << pixel_shift);
         }
     }    
 }
@@ -130,7 +130,7 @@ void change_floors(uint32_t new_floor) {
             }
             wait_ms(scroll_in_delay);
         }
-        memcpy(display_buffer, floorplan_second, floorplan_second_size);
+        memcpy(display_buffer, floorplan_first, floorplan_first_size);
     } else if (new_floor == 1) {
         for (uint32_t i = 0; i <= display_columns / scroll_in_columns; i++) {
             for (uint32_t row = 0; row < display_rows; row++) {
