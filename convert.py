@@ -19,4 +19,4 @@ for i in range(len(image_data)):
     new_bytes += (this_byte & 0x40) << 6;
     new_bytes += (this_byte & 0x80) << 7;
 
-    dest_file.write(struct.pack('H', new_bytes))
+    dest_file.write(struct.pack('>H', new_bytes))
