@@ -27,6 +27,7 @@ static int get_device_status(uint32_t id) {
     int open_result = socket.open(&net);
     if (open_result != 0) {
         safe_printf("socket open failed:%d\n", open_result);
+        network_mutex.unlock();
         return -1;
     }
     int connect_result = -1;
@@ -35,9 +36,16 @@ static int get_device_status(uint32_t id) {
         if (connect_result != 0) {
             safe_printf("socket connect failed:%d\n", connect_result);
             socket.close();
-            while (network_setup()) {
-                safe_printf("Failed to set up network. Will try again in a bit\n");
-                wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+            const char *ip = net.get_ip_address();
+            if (ip == NULL) {
+                while (network_setup()) {
+                    safe_printf("Failed to set up network. Will try again in a bit\n");
+                    wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+                }
+            } else {
+                // the endpoint is probably not available. bail
+                network_mutex.unlock();
+                return -1;
             }
         }
     }
@@ -73,9 +81,16 @@ static int get_device_status(uint32_t id) {
         if (connect_result != 0) {
             safe_printf("socket connect failed:%d\n", connect_result);
             socket.close();
-            while (network_setup()) {
-                safe_printf("Failed to set up network. Will try again in a bit\n");
-                wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+            const char *ip = net.get_ip_address();
+            if (ip == NULL) {
+                while (network_setup()) {
+                    safe_printf("Failed to set up network. Will try again in a bit\n");
+                    wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+                }
+            } else {
+                // the endpoint is probably not available
+                network_mutex.unlock();
+                return -1;
             }
         }
     }
