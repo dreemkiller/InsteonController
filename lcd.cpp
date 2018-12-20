@@ -172,7 +172,7 @@ int convert_bitmap(uint8_t *source, uint32_t source_size, uint8_t *dest, uint32_
                     
                     word |= (pixel_value << (2 * pixel));
                 }
-                // The following two assignments are "out of order" because if little-endianness within the byte
+                // The following two assignments are "out of order" because of little-endianness within the byte
                 dest[i * 2 + 1] = (uint8_t) (word & 0xff);
                 dest[i * 2] = (uint8_t) ((word >> 8) & 0xff);
             }
@@ -185,7 +185,7 @@ int convert_bitmap(uint8_t *source, uint32_t source_size, uint8_t *dest, uint32_
 }
 status_t APP_LCDC_Init(void)
 {
-    uint32_t bmp_size = (uint32_t) (&_binary_Floorplan_first_bmp_end - &_binary_Floorplan_first_bmp_start);
+    floorplan_first_size = (uint32_t) (&_binary_Floorplan_first_bmp_end - &_binary_Floorplan_first_bmp_start);
 
     display_buffer_size = 272 * 480 * 2 / 8;
     display_buffer = (uint8_t *) malloc( display_buffer_size );
@@ -195,32 +195,10 @@ status_t APP_LCDC_Init(void)
     }
     memset(display_buffer, 0, display_buffer_size);
 
-    floorplan_first_size = bmp_size * 2;
-    floorplan_first = (uint8_t *) malloc( floorplan_first_size );
-    if (floorplan_first == NULL) {
-        safe_printf("Failed to allocate floor plan copy\n");
-        assert(0);
-    }
+    floorplan_first = (uint8_t *) &_binary_Floorplan_first_bmp_start;
 
-    int convert_result = convert_bitmap((uint8_t *)&_binary_Floorplan_first_bmp_start, bmp_size, floorplan_first, floorplan_first_size, ONEBPP_TO_TWOBPP);
-    if (convert_result) {
-        safe_printf("Failed to convert bitmap:%d\n", convert_result);
-        assert(0);
-    }
-
-    uint32_t second_bmp_size = (uint32_t) (&_binary_Floorplan_second_bmp_end - &_binary_Floorplan_second_bmp_start);
-    floorplan_second_size = second_bmp_size * 2;
-    floorplan_second = (uint8_t *) malloc( floorplan_second_size );
-    if (floorplan_second == NULL) {
-        safe_printf("Failed to allocate space for second floorplan\n");
-        assert(0);
-    }
-
-    convert_result = convert_bitmap((uint8_t *)&_binary_Floorplan_second_bmp_start, second_bmp_size, floorplan_second, floorplan_second_size, ONEBPP_TO_TWOBPP);
-    if (convert_result) {
-        safe_printf("Failed to convert second floor bitmap:%d\n", convert_result);
-        assert(0);
-    }
+    floorplan_second_size = (uint32_t) (&_binary_Floorplan_second_bmp_end - &_binary_Floorplan_second_bmp_start);
+    floorplan_second = (uint8_t *) &_binary_Floorplan_second_bmp_start;
 
     current_floor = 0;
     memcpy( display_buffer, floorplan_first, floorplan_first_size );
