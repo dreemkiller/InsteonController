@@ -25,12 +25,6 @@ int network_setup() {
     const char *ip = net.get_ip_address();
     if (ip == NULL) {
         safe_printf("Failed to connect to network. Not sure why\n");
-        while(1) {
-            led2 = 1;
-            wait(0.05);
-            led2 = 0;
-            wait(0.05);
-        }
     }
     safe_printf("IP address is %s\n", ip ? ip: "No IP");
     if (ip == NULL) {

@@ -220,7 +220,7 @@ int main(void)
     Thread screensaver_thread;
     screensaver_timer.start();
 
-    osStatus err = screensaver_thread.start(&screensaver_loop);
+    err = screensaver_thread.start(&screensaver_loop);
     if (err) {
         safe_printf("screen saver thread failed to start\n");
         assert(0);
