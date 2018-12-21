@@ -22,10 +22,6 @@ struct InsteonArguments {
 #define INSTEON_ON 0x11 
 #define INSTEON_OFF 0x13
 
-#define INSTEON_IP "192.168.0.100"
-
-#define INSTEON_PORT 25105
-
 #define INSTEON_STATUS_REQUEST 0x19
 #define INSTEON_STATUS_DELAY 1.0f
 #define LIGHT_STATUS_INTERVAL 30.0f
@@ -33,6 +29,8 @@ struct InsteonArguments {
 int insteon_get_region_on(uint32_t id, IdType type);
 
 void light_status_loop();
+
+int network_setup();
 
 void insteon_loop();
 

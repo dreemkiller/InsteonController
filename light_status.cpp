@@ -13,6 +13,7 @@ extern uint32_t num_floorplan_regions;
 
 extern WizFi310Interface net;
 extern Mutex network_mutex;
+extern uint32_t current_floor;
 
 /* Get the on/off status of an Insteon device
  * The following sequence is derived from page 10 under "Status Request Example:" of the pdf at
@@ -27,18 +28,32 @@ static int get_device_status(uint32_t id) {
     int open_result = socket.open(&net);
     if (open_result != 0) {
         safe_printf("socket open failed:%d\n", open_result);
+        network_mutex.unlock();
         return -1;
     }
-    int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("socket connect failed:%d\n", connect_result);
-        socket.close();
-        return -1;
+    int connect_result = -1;
+    while (connect_result) {
+        connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
+        if (connect_result != 0) {
+            safe_printf("socket connect failed:%d\n", connect_result);
+            socket.close();
+            const char *ip = net.get_ip_address();
+            if (ip == NULL) {
+                while (network_setup()) {
+                    safe_printf("Failed to set up network. Will try again in a bit\n");
+                    wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+                }
+            } else {
+                // the endpoint is probably not available. bail
+                network_mutex.unlock();
+                return -1;
+            }
+        }
     }
     char read_status_command[17];
     snprintf(read_status_command, sizeof(read_status_command), "0262%06lX0F1900", id);
     char sbuffer[1024];
-    sprintf(sbuffer, "GET /3?%s=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", read_status_command, INSTEON_IP, INSTEON_PORT);
+    sprintf(sbuffer, "GET /3?%s=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", read_status_command, MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     int scount = socket.send(sbuffer, strlen(sbuffer));
     if (scount == 0) {
         safe_printf("Failed to send\n");
@@ -61,16 +76,30 @@ static int get_device_status(uint32_t id) {
         return -1;
     }
 
-    connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("Socket connect failed:%d\n", connect_result);
-        return -1;
+    connect_result = -1;
+    while (connect_result) {
+        connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
+        if (connect_result != 0) {
+            safe_printf("socket connect failed:%d\n", connect_result);
+            socket.close();
+            const char *ip = net.get_ip_address();
+            if (ip == NULL) {
+                while (network_setup()) {
+                    safe_printf("Failed to set up network. Will try again in a bit\n");
+                    wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+                }
+            } else {
+                // the endpoint is probably not available
+                network_mutex.unlock();
+                return -1;
+            }
+        }
     }
 
     // wait for the response to be ready
     wait(INSTEON_STATUS_DELAY);
 
-    sprintf(sbuffer, "GET /buffstatus.xml HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", INSTEON_IP, INSTEON_PORT);
+    sprintf(sbuffer, "GET /buffstatus.xml HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
 
     scount = socket.send(sbuffer, strlen(sbuffer));
     if (scount == 0) {
@@ -97,8 +126,8 @@ static int get_device_status(uint32_t id) {
     }
     rbuffer_ptr += 2;
     if (strncmp(rbuffer_ptr, "0250", 4)) { // From PLM Insteon Received
-        safe_printf("\"From PLM Insteon Received\" not received\n");
-        return -1;
+        safe_printf("\"From PLM Insteon Received\" not received, instead %c%c%c%c\n", rbuffer_ptr[0], rbuffer_ptr[1], rbuffer_ptr[2], rbuffer_ptr[3]);
+        //return -1;
     }
     rbuffer_ptr += 4;
     char device_id_str[7];
@@ -134,14 +163,16 @@ void light_status_loop() {
         for (uint32_t i = 0; i < num_floorplan_regions; i++) {
             RectangularRegion this_region = floorplan_regions[i];
             int region_on_result = insteon_get_region_on(this_region.arguments.id,
-                                                         this_region.arguments.type,
-                                                         this_region.arguments.reference_device);
-            if (region_on_result == 0) {
-                unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
-            } else if (region_on_result == 1) {
-                light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
-            } else {
-                safe_printf("Failed to get region(%s) status:%d\n", this_region.Name, region_on_result);
+                                                        this_region.arguments.type,
+                                                        this_region.arguments.reference_device);
+            if (this_region.floor == current_floor) {
+                if (region_on_result == 0) {
+                    unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
+                } else if (region_on_result == 1) {
+                    light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
+                } else {
+                    safe_printf("Failed to get region(%s) status:%d\n", this_region.Name, region_on_result);
+                }
             }
         }
         wait(MBED_CONF_APP_LIGHTSTATUS_CHECK_INTERVAL); // TODO: Also wait for screen saver to be off

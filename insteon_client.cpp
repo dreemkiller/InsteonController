@@ -17,22 +17,21 @@ extern Mutex network_mutex;
 WizFi310Interface net(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX, false);
 
 
-void insteon_setup() {
-    safe_printf("insteon_setup\n");
+int network_setup() {
+    safe_printf("network_setup\n");
 
     net.connect(MBED_CONF_APP_WIFI_SSID, MBED_CONF_APP_WIFI_PASSWORD, NSAPI_SECURITY_WPA_WPA2, 0);
 
     const char *ip = net.get_ip_address();
     if (ip == NULL) {
         safe_printf("Failed to connect to network. Not sure why\n");
-        while(1) {
-            led2 = 1;
-            wait(0.05);
-            led2 = 0;
-            wait(0.05);
-        }
     }
-    safe_printf("IP address is %s\n", ip ? ip: "No IP");    
+    safe_printf("IP address is %s\n", ip ? ip: "No IP");
+    if (ip == NULL) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 
@@ -44,18 +43,23 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
         safe_printf("socket open failed:%d\n", open_result);
         return;
     }
-    int connect_result = socket.connect(INSTEON_IP, INSTEON_PORT);
-    if (connect_result != 0) {
-        safe_printf("socket connect failed:%d\n", connect_result);
-        socket.close();
-        network_mutex.unlock();
-        return;
+    int connect_result = -1;
+    while (connect_result) {
+        connect_result = socket.connect(MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
+        if (connect_result != 0) {
+            safe_printf("socket connect failed:%d\n", connect_result);
+            socket.close();
+            while (network_setup()) {
+                safe_printf("Failed to set up network. Will try again in a bit\n");
+                wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
+            }
+        }
     }
     char sbuffer [1024];
     if (type == DEVICE_ID) {
-        sprintf(sbuffer, "GET /3?0262%06lx0F%02lxFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", id, command, INSTEON_IP, INSTEON_PORT);
+        sprintf(sbuffer, "GET /3?0262%06lx0F%02lxFF=I=3 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", id, command, MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     } else if (type == GROUP_ID) {
-        sprintf(sbuffer, "GET /0?%lx%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, INSTEON_IP, INSTEON_PORT);
+        sprintf(sbuffer, "GET /0?%lx%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     } else {
         assert(0);
     }
@@ -72,7 +76,6 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
 }
 
 void insteon_loop() {
-    insteon_setup();
 #if 1
     Thread light_status_thread;
     int err = light_status_thread.start(&light_status_loop);
