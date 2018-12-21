@@ -13,6 +13,7 @@ extern uint32_t num_floorplan_regions;
 
 extern WizFi310Interface net;
 extern Mutex network_mutex;
+extern uint32_t current_floor;
 
 /* Get the on/off status of an Insteon device
  * The following sequence is derived from page 10 under "Status Request Example:" of the pdf at
@@ -162,14 +163,16 @@ void light_status_loop() {
         for (uint32_t i = 0; i < num_floorplan_regions; i++) {
             RectangularRegion this_region = floorplan_regions[i];
             int region_on_result = insteon_get_region_on(this_region.arguments.id,
-                                                         this_region.arguments.type,
-                                                         this_region.arguments.reference_device);
-            if (region_on_result == 0) {
-                unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
-            } else if (region_on_result == 1) {
-                light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
-            } else {
-                safe_printf("Failed to get region(%s) status:%d\n", this_region.Name, region_on_result);
+                                                        this_region.arguments.type,
+                                                        this_region.arguments.reference_device);
+            if (this_region.floor == current_floor) {
+                if (region_on_result == 0) {
+                    unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
+                } else if (region_on_result == 1) {
+                    light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
+                } else {
+                    safe_printf("Failed to get region(%s) status:%d\n", this_region.Name, region_on_result);
+                }
             }
         }
         wait(MBED_CONF_APP_LIGHTSTATUS_CHECK_INTERVAL); // TODO: Also wait for screen saver to be off
