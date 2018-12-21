@@ -11,6 +11,7 @@ typedef struct RectangularRegion {
     uint32_t floor;
     int32_t on_signal;
     int32_t off_signal;
+    bool on;
     struct InsteonArguments arguments;
 } RectangularRegion;
 

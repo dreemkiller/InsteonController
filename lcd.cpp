@@ -3,6 +3,7 @@
 #include "fsl_lcdc.h"
 
 #include "lcd.h"
+#include "light_status.h"
 
 #define LCD_PANEL_CLK 9000000
 #define LCD_PPL 480
@@ -149,6 +150,7 @@ void change_floors(uint32_t new_floor) {
         assert(0);
     }
     current_floor = new_floor;
+    update_regions();
     return;
 }
 
@@ -156,33 +158,6 @@ typedef enum {
     ONEBPP_TO_TWOBPP,
 } BitmapConversion;
 
-int convert_bitmap(uint8_t *source, uint32_t source_size, uint8_t *dest, uint32_t dest_size, BitmapConversion conversion) {
-    switch(conversion) {
-        case (ONEBPP_TO_TWOBPP):
-            if (dest_size != 2 * source_size) {
-                safe_printf("Dest size not correct\n");
-                return 1;
-            }
-            memset(dest, 0, dest_size);
-            for (uint32_t i = 0; i < source_size; i++) {
-                uint8_t source_byte = source[i];
-                uint16_t word = 0;
-                for (uint32_t pixel = 0; pixel < 8; pixel++) {
-                    uint8_t pixel_value = (source_byte >> pixel) & 0x01;
-                    
-                    word |= (pixel_value << (2 * pixel));
-                }
-                // The following two assignments are "out of order" because of little-endianness within the byte
-                dest[i * 2 + 1] = (uint8_t) (word & 0xff);
-                dest[i * 2] = (uint8_t) ((word >> 8) & 0xff);
-            }
-            break;
-        default:
-            safe_printf("Unsupported conversion:%d\n", conversion);
-            return 1;
-    }
-    return 0;
-}
 status_t APP_LCDC_Init(void)
 {
     floorplan_first_size = (uint32_t) (&_binary_Floorplan_first_bmp_end - &_binary_Floorplan_first_bmp_start);

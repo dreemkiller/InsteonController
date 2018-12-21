@@ -157,6 +157,22 @@ int insteon_get_region_on(uint32_t id, IdType type, uint32_t reference_device) {
     
 }
 
+Mutex light_status_mutex;
+void update_regions() {
+    light_status_mutex.lock();
+    for (uint32_t i = 0; i < num_floorplan_regions; i++) {
+        RectangularRegion this_region = floorplan_regions[i];
+        if (this_region.floor == current_floor) {
+            if (this_region.on) {
+                light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
+            } else {
+                unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
+            }
+        }
+    }
+    light_status_mutex.unlock();
+}
+
 void light_status_loop() {
     while(true) {
         safe_printf("Light status check triggered\n");
@@ -165,16 +181,15 @@ void light_status_loop() {
             int region_on_result = insteon_get_region_on(this_region.arguments.id,
                                                         this_region.arguments.type,
                                                         this_region.arguments.reference_device);
-            if (this_region.floor == current_floor) {
-                if (region_on_result == 0) {
-                    unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
-                } else if (region_on_result == 1) {
-                    light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
-                } else {
-                    safe_printf("Failed to get region(%s) status:%d\n", this_region.Name, region_on_result);
-                }
+            if (region_on_result == 0) {
+                floorplan_regions[i].on = false;
+            } else if (region_on_result == 1) {
+                floorplan_regions[i].on = true;
+            } else {
+                safe_printf("Failed to get region(%s) status:%d\n", this_region.Name, region_on_result);
             }
         }
+        update_regions();
         wait(MBED_CONF_APP_LIGHTSTATUS_CHECK_INTERVAL); // TODO: Also wait for screen saver to be off
     }
 }

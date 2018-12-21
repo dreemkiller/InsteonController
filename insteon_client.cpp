@@ -8,6 +8,7 @@
 #include "insteon_client.h"
 #include "floorplan_regions.h"
 #include "lcd.h"
+#include "light_status.h"
 
 extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
@@ -91,10 +92,12 @@ void insteon_loop() {
         int32_t signals = wait_result.value.signals;
         for (uint32_t region_num = 0; region_num < num_floorplan_regions; region_num++ ) {
             RectangularRegion this_region = floorplan_regions[region_num];
-            if (signals & this_region.on_signal) {
+            if (signals & floorplan_regions[region_num].on_signal) {
+                floorplan_regions[region_num].on = true;
                 insteon_control(this_region.arguments.id, this_region.arguments.type, INSTEON_ON);
                 light_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
             } else if (signals & this_region.off_signal) {
+                floorplan_regions[region_num].on = false;
                 insteon_control(this_region.arguments.id, this_region.arguments.type, INSTEON_OFF);
                 unlight_region(this_region.XMin, this_region.YMin, this_region.XMax, this_region.YMax);
             }
