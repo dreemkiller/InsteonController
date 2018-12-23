@@ -36,6 +36,7 @@
 //#include "fsl_debug_console.h"
 #include "fsl_i2c.h"
 #include "fsl_ft5406.h"
+#include "mbed.h"
 
 typedef struct _ft5406_touch_point
 {
@@ -64,8 +65,8 @@ status_t FT5406_Init(ft5406_handle_t *handle, I2C_Type *base)
     status_t status;
     uint8_t mode;
 
-    assert(handle);
-    assert(base);
+    MBED_ASSERT(handle != NULL);
+    MBED_ASSERT(base != NULL);
 
     if (!handle || !base)
     {
@@ -104,7 +105,7 @@ status_t FT5406_Init(ft5406_handle_t *handle, I2C_Type *base)
 
 status_t FT5406_Denit(ft5406_handle_t *handle)
 {
-    assert(handle);
+    MBED_ASSERT(handle != NULL);
 
     if (!handle)
     {
@@ -117,7 +118,7 @@ status_t FT5406_Denit(ft5406_handle_t *handle)
 
 status_t FT5406_ReadTouchData(ft5406_handle_t *handle)
 {
-    assert(handle);
+    MBED_ASSERT(handle != NULL);
 
     if (!handle)
     {
@@ -170,7 +171,7 @@ status_t FT5406_GetMultiTouch(ft5406_handle_t *handle, int *touch_count, touch_p
     if (status == kStatus_Success)
     {
         ft5406_touch_data_t *touch_data = (ft5406_touch_data_t *)(void *)(handle->touch_buf);
-        int i;
+        uint i;
 
         /* Decode number of touches */
         if (touch_count)

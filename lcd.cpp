@@ -147,7 +147,7 @@ void change_floors(uint32_t new_floor) {
         memcpy(display_buffer, floorplan_second, floorplan_second_size);
     } else {
         safe_printf("Unknown floor:%d\n", new_floor);
-        assert(0);
+        MBED_ASSERT(0);
     }
     current_floor = new_floor;
     update_regions();
@@ -166,7 +166,7 @@ status_t APP_LCDC_Init(void)
     display_buffer = (uint8_t *) malloc( display_buffer_size );
     if (display_buffer == NULL) {
         safe_printf("Failed to allocate display buffer\n");
-        assert(0);
+        MBED_ASSERT(0);
     }
     memset(display_buffer, 0, display_buffer_size);
 

@@ -178,14 +178,14 @@ int main(void)
     {
         safe_printf("LCD init failed\n");
     }
-    assert(status == kStatus_Success);
+    MBED_ASSERT(status == kStatus_Success);
     led2 = 0;
     status = APP_I2C_Init();
     if (status != kStatus_Success)
     {
         safe_printf("I2C init failed\n");
     }
-    assert(status == kStatus_Success);
+    MBED_ASSERT(status == kStatus_Success);
 
     GPIO_PinInit(GPIO, 2, 27, &pin_config);
     GPIO->B[2][27] = 1;
@@ -202,7 +202,7 @@ int main(void)
             wait(0.05);
         }
     }
-    assert( status == kStatus_Success);
+    MBED_ASSERT( status == kStatus_Success);
 
     safe_printf("Ready to go! joe\n");
     while (network_setup()) {
@@ -213,7 +213,7 @@ int main(void)
     osStatus err = InsteonHttpThread.start(&insteon_loop);
     if (err) {
         safe_printf("Http Setup thread failed\n");
-        assert(0);
+        MBED_ASSERT(0);
     }
     safe_printf("insteon_loop started\n");
 
@@ -223,7 +223,7 @@ int main(void)
     err = screensaver_thread.start(&screensaver_loop);
     if (err) {
         safe_printf("screen saver thread failed to start\n");
-        assert(0);
+        MBED_ASSERT(0);
     }
     screensaver_on = false;
     safe_printf("screensaver_loop started\n");

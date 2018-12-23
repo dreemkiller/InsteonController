@@ -62,7 +62,7 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
     } else if (type == GROUP_ID) {
         sprintf(sbuffer, "GET /0?%lx%02lu=I=0 HTTP/1.1\nAuthorization: Basic Q2xpZnRvbjg6MEJSR2M4cnE=\nHost: %s:%d\r\n\r\n", command, id, MBED_CONF_APP_INSTEON_IP, MBED_CONF_APP_INSTEON_PORT);
     } else {
-        assert(0);
+        MBED_ASSERT(0);
     }
     int scount = socket.send(sbuffer, strlen(sbuffer));
     if (scount == 0) {
@@ -77,14 +77,13 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
 }
 
 void insteon_loop() {
-#if 1
     Thread light_status_thread;
     int err = light_status_thread.start(&light_status_loop);
     if (err != 0) {
         safe_printf("Failed to start light status thread\n");
-        assert(0);
+        MBED_ASSERT(0);
     }
-#endif
+
     safe_printf("insteon_setup complete\n");
     while(true) {
         safe_printf("Http Thread waiting\n");
