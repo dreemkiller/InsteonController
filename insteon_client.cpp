@@ -13,6 +13,7 @@
 extern RectangularRegion floorplan_regions[];
 extern uint32_t num_floorplan_regions;
 extern DigitalOut led2;
+extern DigitalOut led3;
 extern Mutex network_mutex;
 
 WizFi310Interface net(MBED_CONF_APP_WIFI_TX, MBED_CONF_APP_WIFI_RX, false);
@@ -39,6 +40,7 @@ int network_setup() {
 void insteon_control(uint32_t id, IdType type, uint32_t command) {
     TCPSocket socket;
     network_mutex.lock();
+    led2 = 0;
     int open_result = socket.open(&net);
     if (open_result != 0) {
         safe_printf("socket open failed:%d\n", open_result);
@@ -51,9 +53,11 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
             safe_printf("socket connect failed:%d\n", connect_result);
             socket.close();
             while (network_setup()) {
+                led3 = 0;
                 safe_printf("Failed to set up network. Will try again in a bit\n");
                 wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
             }
+            led3 = 0;
         }
     }
     char sbuffer [1024];
@@ -74,6 +78,7 @@ void insteon_control(uint32_t id, IdType type, uint32_t command) {
     socket.recv(rbuffer, sizeof(rbuffer));
     socket.close();
     network_mutex.unlock();
+    led2 = 1;
 }
 
 void insteon_loop() {

@@ -127,10 +127,10 @@ const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
 }
 #define EEPROM_CLK_FREQ CLOCK_GetFreq(kCLOCK_BusClk)
 int main(void) {
+    safe_printf("starting\n");
     led1 = 1;
     led2 = 1;
-    led3 = 1;
-    printf("starting\n");
+    led3 = 0;
     int cursorPosX = 0U;
     int cursorPosY = 0U;
     
@@ -169,7 +169,7 @@ int main(void) {
         safe_printf("LCD init failed\n");
     }
     MBED_ASSERT(status == kStatus_Success);
-    led2 = 0;
+    led2 = 1;
     status = APP_I2C_Init();
     if (status != kStatus_Success) {
         safe_printf("I2C init failed\n");
@@ -180,23 +180,20 @@ int main(void) {
     GPIO->B[2][27] = 1;
     
     status = FT5406_Init(&touch_handle, EXAMPLE_I2C_MASTER);
-    if (status != kStatus_Success) {
+    while (status != kStatus_Success) {
         safe_printf("Touch panel init failed\n");
-        // Make LED 1 flash fast forever as feedback for when the console is not connected
-        while(1) {
-            led1 = 1;
-            wait(0.05);
-            led1 = 0;
-            wait(0.05);
-        }
+        // Wait and try again
+        wait(1.0f);
+        status = FT5406_Init(&touch_handle, EXAMPLE_I2C_MASTER);
     }
-    MBED_ASSERT( status == kStatus_Success);
 
     safe_printf("Ready to go! joe\n");
     while (network_setup()) {
+        led3 = 0;
         safe_printf("Failed to set up network. Will try again in a bit\n");
         wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
     }
+    led3 = 1;
 
     osStatus err = InsteonHttpThread.start(&insteon_loop);
     if (err) {

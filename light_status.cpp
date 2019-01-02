@@ -14,6 +14,8 @@ extern uint32_t num_floorplan_regions;
 extern WizFi310Interface net;
 extern Mutex network_mutex;
 extern uint32_t current_floor;
+extern DigitalOut led2;
+extern DigitalOut led3;
 
 /* Get the on/off status of an Insteon device
  * The following sequence is derived from page 10 under "Status Request Example:" of the pdf at
@@ -25,10 +27,12 @@ extern uint32_t current_floor;
 static int get_device_status(uint32_t id) {
     TCPSocket socket;
     network_mutex.lock();
+    led2 = 0;
     int open_result = socket.open(&net);
     if (open_result != 0) {
         safe_printf("socket open failed:%d\n", open_result);
         network_mutex.unlock();
+        led2 = 1;
         return -1;
     }
     int connect_result = -1;
@@ -40,12 +44,15 @@ static int get_device_status(uint32_t id) {
             const char *ip = net.get_ip_address();
             if (ip == NULL) {
                 while (network_setup()) {
+                    led3 = 0;
                     safe_printf("Failed to set up network. Will try again in a bit\n");
                     wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
                 }
+                led3 = 1;
             } else {
                 // the endpoint is probably not available. bail
                 network_mutex.unlock();
+                led2 = 1;
                 return -1;
             }
         }
@@ -68,8 +75,10 @@ static int get_device_status(uint32_t id) {
         //return -1;
     }
     network_mutex.unlock();
+    led2 = 1;
 
     network_mutex.lock();
+    led2 = 0;
     open_result = socket.open(&net);
     if (open_result != 0) {
         safe_printf("Socket open failed:%d\n", open_result);
@@ -85,12 +94,15 @@ static int get_device_status(uint32_t id) {
             const char *ip = net.get_ip_address();
             if (ip == NULL) {
                 while (network_setup()) {
+                    led3 = 0;
                     safe_printf("Failed to set up network. Will try again in a bit\n");
                     wait(MBED_CONF_APP_NETWORK_CHECK_INTERVAL);
                 }
+                led3 = 1;
             } else {
                 // the endpoint is probably not available
                 network_mutex.unlock();
+                led2 = 1;
                 return -1;
             }
         }
@@ -110,6 +122,7 @@ static int get_device_status(uint32_t id) {
 
     socket.close();
     network_mutex.unlock();
+    led2 = 1;
 
     // Now, I could implement an entire XML parser (kinda hard, kinda memory intensive), or I could just munge the string. Which do you think
     // I'll do?
