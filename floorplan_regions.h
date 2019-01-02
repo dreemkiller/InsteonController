@@ -15,6 +15,9 @@ typedef struct RectangularRegion {
     struct InsteonArguments arguments;
 } RectangularRegion;
 
+extern RectangularRegion floorplan_regions[];
+extern uint32_t num_floorplan_regions;
+
 #define LIVING_ROOM_GROUP_ID 0x08
 #define OUTSIDE_GROUP_NUMBER     0x2896d5
 #define KITCHEN_INSTEON_ID       0x46e275

@@ -43,6 +43,7 @@
 #include "fsl_gpio.h"
 #include "board.h"
 #include "pin_mux.h"
+#include "fsl_eeprom.h"
 
 #include "lcd.h"
 #include "floorplan_regions.h"
@@ -61,10 +62,28 @@
 
 #define LONG_TOUCH_THRESHOLD 0.25f
 
-extern uint32_t current_floor;
+struct EventInfo {
+    bool active;
+    int x_pos;
+    int y_pos;
+    float last_event_time;
+    Timer click_timer;
+    Mutex click_mutex;
+};
 
- static void BOARD_InitPWM(void)
-{
+extern uint32_t current_floor;
+extern const char _binary_Floorplan_bmp_start;
+extern DigitalOut backlight;
+
+DigitalOut led1(LED1);
+DigitalOut led2(LED2);
+DigitalOut led3(LED3);
+
+Thread InsteonHttpThread;
+
+Mutex network_mutex;
+
+ static void BOARD_InitPWM(void) {
     sctimer_config_t config;
     sctimer_pwm_signal_param_t pwmParam;
     uint32_t event;
@@ -85,8 +104,7 @@ extern uint32_t current_floor;
 }
 
 
-status_t APP_I2C_Init(void)
-{
+status_t APP_I2C_Init(void) {
     i2c_master_config_t masterConfig;
 
     I2C_MasterGetDefaultConfig(&masterConfig);
@@ -100,12 +118,6 @@ status_t APP_I2C_Init(void)
     return kStatus_Success;
 }
 
-DigitalOut led1(LED1);
-DigitalOut led2(LED2);
-DigitalOut led3(LED3);
-
-extern const char _binary_Floorplan_bmp_start;
-
 const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
     if (region.XMin < x && x < region.XMax && 
         region.YMin < y && y < region.YMax) {
@@ -113,29 +125,8 @@ const char* checkRegion(RectangularRegion region, uint32_t x, uint32_t y) {
     }
     return NULL;
 }
-
-struct EventInfo {
-    bool active;
-    int x_pos;
-    int y_pos;
-    float last_event_time;
-    Timer click_timer;
-    Mutex click_mutex;
-};
-
-void single_click_detect_loop();
-
-extern RectangularRegion floorplan_regions[];
-extern uint32_t num_floorplan_regions;
-
-Thread InsteonHttpThread;
-
-extern DigitalOut backlight;
-
-Mutex network_mutex;
-
-int main(void)
-{
+#define EEPROM_CLK_FREQ CLOCK_GetFreq(kCLOCK_BusClk)
+int main(void) {
     led1 = 1;
     led2 = 1;
     led3 = 1;
@@ -174,15 +165,13 @@ int main(void)
     BOARD_InitPWM();
 
     status = APP_LCDC_Init();
-    if (status != kStatus_Success)
-    {
+    if (status != kStatus_Success) {
         safe_printf("LCD init failed\n");
     }
     MBED_ASSERT(status == kStatus_Success);
     led2 = 0;
     status = APP_I2C_Init();
-    if (status != kStatus_Success)
-    {
+    if (status != kStatus_Success) {
         safe_printf("I2C init failed\n");
     }
     MBED_ASSERT(status == kStatus_Success);
@@ -191,8 +180,7 @@ int main(void)
     GPIO->B[2][27] = 1;
     
     status = FT5406_Init(&touch_handle, EXAMPLE_I2C_MASTER);
-    if (status != kStatus_Success)
-    {
+    if (status != kStatus_Success) {
         safe_printf("Touch panel init failed\n");
         // Make LED 1 flash fast forever as feedback for when the console is not connected
         while(1) {
@@ -230,10 +218,8 @@ int main(void)
 
     Timer touch_timer;
     bool timer_active = false; // in an ideal world, Timer would contain this value
-    for (;;)
-    {
-        if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY))
-        {
+    for (;;) {
+        if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY)) {
             if (touch_event == kTouch_Down) {
                 safe_printf("Resetting screensaver_timer\n");
                 screensaver_timer.reset();
@@ -289,10 +275,8 @@ int main(void)
                 }
             }
         }
-        else
-        {
+        else {
             safe_printf("error reading touch controller\r\n");
         }
-        
     }
 }
