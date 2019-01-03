@@ -43,7 +43,6 @@
 #include "fsl_gpio.h"
 #include "board.h"
 #include "pin_mux.h"
-#include "fsl_eeprom.h"
 
 #include "lcd.h"
 #include "floorplan_regions.h"

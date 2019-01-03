@@ -146,7 +146,7 @@ static int get_device_status(uint32_t id) {
     char device_id_str[7];
     snprintf(device_id_str, sizeof(device_id_str), "%06lX", id);
     if (strncmp(rbuffer_ptr, device_id_str, strlen(device_id_str))) {
-        safe_printf("Did not receive a response for the correct device\n");
+        safe_printf("Did not receive a response for the correct device. Expected %s, got %s\n", device_id_str, rbuffer_ptr);
         return -1;
     }
     rbuffer_ptr += (int)strlen(device_id_str);
