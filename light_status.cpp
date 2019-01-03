@@ -170,9 +170,8 @@ int insteon_get_region_on(uint32_t id, IdType type, uint32_t reference_device) {
     
 }
 
-Mutex light_status_mutex;
 void update_regions() {
-    light_status_mutex.lock();
+    lcd_update_mutex.lock();
     for (uint32_t i = 0; i < num_floorplan_regions; i++) {
         RectangularRegion this_region = floorplan_regions[i];
         if (this_region.floor == current_floor) {
@@ -183,7 +182,7 @@ void update_regions() {
             }
         }
     }
-    light_status_mutex.unlock();
+    lcd_update_mutex.unlock();
 }
 
 void light_status_loop() {

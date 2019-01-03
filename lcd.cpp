@@ -32,6 +32,7 @@ extern const int _binary_Floorplan_second_bmp_size;
 
 /* Frame end flag. */
 static volatile bool s_frameEndFlag;
+Mutex lcd_update_mutex;
 
 /* Color palette. */
 #define YELLOW_NYBBLE 0xe784U
@@ -119,6 +120,7 @@ void change_floors(uint32_t new_floor) {
     if (new_floor == current_floor) {
         return; // nothing to do
     }
+    lcd_update_mutex.lock();
     if (new_floor == 0) {
         for (uint32_t i = 0; i <= display_columns / scroll_in_columns; i++) {
             for (uint32_t row = 0; row < display_rows; row++) {
@@ -149,6 +151,7 @@ void change_floors(uint32_t new_floor) {
         safe_printf("Unknown floor:%d\n", new_floor);
         MBED_ASSERT(0);
     }
+    lcd_update_mutex.unlock();
     current_floor = new_floor;
     update_regions();
     return;
