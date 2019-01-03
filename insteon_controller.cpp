@@ -183,6 +183,7 @@ int main(void) {
         safe_printf("Touch panel init failed\n");
         // Wait and try again
         wait(1.0f);
+        safe_printf("Finished waiting\n");
         status = FT5406_Init(&touch_handle, EXAMPLE_I2C_MASTER);
     }
 
@@ -210,17 +211,14 @@ int main(void) {
         MBED_ASSERT(0);
     }
     screensaver_on = false;
-    safe_printf("screensaver_loop started\n");
 
     Timer touch_timer;
     bool timer_active = false; // in an ideal world, Timer would contain this value
     for (;;) {
         if (kStatus_Success == FT5406_GetSingleTouch(&touch_handle, &touch_event, &cursorPosX, &cursorPosY)) {
             if (touch_event == kTouch_Down) {
-                safe_printf("Resetting screensaver_timer\n");
                 screensaver_timer.reset();
                 if (screensaver_on) {
-                    safe_printf("Turning off screensaver\n");
                     turn_off_screensaver();
                 } else { // else because we don't want touches when screen saver is on to have UI effects
                     timer_active = true;
